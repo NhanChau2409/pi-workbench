@@ -32,7 +32,8 @@ package.json
 - [x] Define standard Docker/Git interaction
 - [x] Define ownership-label cleanup rules
 - [x] Define host/worktree materialization workflows
-- [ ] Review skill and package contents
-- [ ] Rename or replace GitHub repository
-- [ ] Publish v0.1.0
-- [ ] Install pinned package and validate Pi discovery
+- [x] Review skill and package contents
+- [x] Replace GitHub repository with clean `pi-lab` history; archive `pi-sbx`
+- [x] Publish v0.1.0
+- [x] Install pinned package and validate Pi discovery
+- [x] Validate documented Docker lifecycle against OrbStack and clean all smoke resources
