@@ -12,7 +12,7 @@ A container is useful isolation against accidental host modification, not a perf
 - applying a container-tested installation directly to a host;
 - publishing or deploying an artifact.
 
-Never mount `/var/run/docker.sock` into a lab unless the user understands that it effectively grants host Docker control.
+Never mount `/var/run/docker.sock` into a POC unless the user understands that it effectively grants host Docker control.
 
 ## Secrets
 
@@ -23,11 +23,11 @@ Prefer a narrowly scoped, ignored env file. Record only its path in metadata. Do
 Require both labels:
 
 ```text
-dev.pi-lab.managed=true
-dev.pi-lab.name=NAME
+dev.poc.managed=true
+dev.poc.name=NAME
 ```
 
-Never use unrestricted `docker system prune`. Never delete shared upstream images. Never claim a pre-existing volume as lab-owned.
+Never use unrestricted `docker system prune`. Never delete shared upstream images. Never claim a pre-existing volume as POC-owned.
 
 ## Host application
 

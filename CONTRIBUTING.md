@@ -1,6 +1,6 @@
 # Contributing
 
-`pi-lab` is a skill-only Pi package. Keep it transparent and small.
+`pi-poc` is a skill-only Pi package. Keep it transparent and small.
 
 - Use standard Docker and Git commands instead of building a parallel CLI.
 - Put decision guidance in `SKILL.md` and detailed procedures in references.

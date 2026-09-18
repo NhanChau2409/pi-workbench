@@ -1,6 +1,6 @@
 # Materialization
 
-A lab is disposable; useful results must live in a repository or explicit export.
+A POC is disposable; useful results must live in a repository or explicit export.
 
 ## Existing repository
 
@@ -9,7 +9,7 @@ The default workspace is a host Git worktree. Changes are already outside the co
 1. Run the project's tests inside the container.
 2. Inspect `git status` and the diff from the host.
 3. Remove generated or secret files.
-4. Commit on branch `pi-lab/NAME` only when requested.
+4. Commit on branch `poc/NAME` only when requested.
 5. Use the repository's normal review and merge workflow.
 
 Do not copy the mutable container filesystem into the repository.

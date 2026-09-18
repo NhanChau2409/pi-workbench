@@ -1,8 +1,8 @@
 {
   "name": "pi-lab",
-  "version": "0.1.0",
-  "description": "A Pi skill for creating and managing isolated container development environments with Docker Engine and OrbStack.",
-  "keywords": ["pi-package", "pi-skill", "docker", "orbstack", "development-environment"],
+  "version": "0.1.1",
+  "description": "A central Pi package for custom skills and workflows.",
+  "keywords": ["pi-package", "pi-skill", "agent-skills", "docker", "orbstack", "poc", "proof-of-concept"],
   "homepage": "https://github.com/NhanChau2409/pi-lab#readme",
   "repository": {
     "type": "git",

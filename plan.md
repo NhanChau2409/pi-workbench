@@ -1,10 +1,10 @@
-# pi-lab local development plan
+# pi-poc local development plan
 
 > Development-only. Excluded from the published package.
 
 ## Goal
 
-Deliver a skill-only Pi package for one transparent container development-environment lifecycle:
+Deliver a skill-only Pi package with a short `poc` skill for one transparent Docker proof-of-concept lifecycle:
 
 ```text
 create -> work -> materialize if useful -> delete
@@ -15,11 +15,11 @@ No standalone CLI, runtime dependency, Docker façade, separate try mode, agent 
 ## Materialization
 
 ```text
-skills/container-lab/SKILL.md
-skills/container-lab/assets/Dockerfile
-skills/container-lab/references/lifecycle.md
-skills/container-lab/references/safety.md
-skills/container-lab/references/materialize.md
+skills/poc/SKILL.md
+skills/poc/assets/Dockerfile
+skills/poc/references/lifecycle.md
+skills/poc/references/safety.md
+skills/poc/references/materialize.md
 README.md
 package.json
 ```
@@ -37,3 +37,4 @@ package.json
 - [x] Publish v0.1.0
 - [x] Install pinned package and validate Pi discovery
 - [x] Validate documented Docker lifecycle against OrbStack and clean all smoke resources
+- [x] Add central Pi package workflow skill for future customizations

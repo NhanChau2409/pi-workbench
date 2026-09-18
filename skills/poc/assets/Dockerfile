@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       procps iproute2 less unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --shell /bin/bash lab \
-    && echo "lab ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/lab
+RUN useradd --create-home --shell /bin/bash poc \
+    && echo "poc ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poc
 
-USER lab
+USER poc
 WORKDIR /workspace
 CMD ["sleep", "infinity"]

@@ -1,8 +1,8 @@
-# pi-lab
+# pi-poc
 
-**A Pi skill for isolated container development environments.**
+**A Pi skill named `poc` for disposable Docker proof-of-concept environments.**
 
-`pi-lab` teaches Pi to create, operate, materialize, and delete ordinary Docker development containers. OrbStack is the primary macOS backend. There is no custom CLI: Pi and humans use standard Docker and Git commands.
+`poc` teaches Pi and other Agent Skills-compatible coding agents to launch, operate, materialize, and delete Docker environments for testing a thesis or approach first. OrbStack is the primary macOS backend. There is no custom CLI: Pi and humans use standard Docker and Git commands.
 
 ## Mental model
 
@@ -14,13 +14,23 @@ Pi on host
        OrbStack Docker Engine
 ```
 
-A lab has one lifecycle:
+A POC has one lifecycle:
 
 ```text
 create -> work -> materialize if useful -> delete
 ```
 
-A short experiment is simply a lab deleted immediately after testing. There is no separate “try” abstraction.
+A short experiment is simply a POC deleted immediately after testing. There is no separate “try” abstraction.
+
+## Pi mindset
+
+The skill is deliberately small and transparent:
+
+- Pi remains the editor/orchestrator on the host;
+- containers provide runtime/dependency isolation, not a promise of hostile-code containment;
+- standard Docker and Git commands stay visible;
+- destructive actions, public exposure, and host application are previewed and require approval;
+- useful results are materialized as reviewable files, scripts, commits, or docs.
 
 ## What the skill adds
 
@@ -36,11 +46,11 @@ A short experiment is simply a lab deleted immediately after testing. There is n
 Routine operations remain standard:
 
 ```bash
-docker ps --filter label=dev.pi-lab.managed=true
-docker exec -it pi-lab-demo bash
-docker logs -f pi-lab-demo
-docker stop pi-lab-demo
-docker start pi-lab-demo
+docker ps --filter label=dev.poc.managed=true
+docker exec -it poc-demo bash
+docker logs -f poc-demo
+docker stop poc-demo
+docker start poc-demo
 ```
 
 ## Install in Pi
@@ -48,24 +58,24 @@ docker start pi-lab-demo
 From Git after the repository is published:
 
 ```bash
-pi install git:github.com/NhanChau2409/pi-lab@v0.1.0
+pi install git:github.com/NhanChau2409/pi-poc@v0.1.0
 ```
 
 For local development:
 
 ```bash
-pi install /absolute/path/to/pi-lab
+pi install /absolute/path/to/pi-poc
 ```
 
 Then use the skill command or natural language:
 
 ```text
-/skill:container-lab create demo to evaluate <tool>
-/skill:container-lab create feature-auth from the current repository with port 3000
-/skill:container-lab show
-/skill:container-lab update feature-auth to add port 9229
-/skill:container-lab materialize feature-auth into the repository
-/skill:container-lab delete feature-auth
+/skill:poc create demo to test this thesis with <tool>
+/skill:poc create feature-auth from the current repository with port 3000
+/skill:poc show
+/skill:poc update feature-auth to add port 9229
+/skill:poc materialize feature-auth into the repository
+/skill:poc delete feature-auth
 ```
 
 ## Requirements
