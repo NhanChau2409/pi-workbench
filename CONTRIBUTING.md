@@ -1,18 +1,20 @@
 # Contributing
 
-`pi-poc` is a skill-only Pi package. Keep it transparent and small.
+Keep `pi-workbench` organized as a collection of small, isolated Pi capabilities.
 
-- Use standard Docker and Git commands instead of building a parallel CLI.
-- Put decision guidance in `SKILL.md` and detailed procedures in references.
-- Keep executable behavior visible in commands Pi reports to the user.
-- Require ownership labels for deletion.
-- Document any new lifecycle behavior.
-- Do not commit credentials or local lab state.
+- Put each extension in `extensions/<name>/index.ts` and its tests in `test/<name>/`.
+- Put each skill in `skills/<name>/SKILL.md`, with detailed procedures in local `references/` files.
+- Give multi-operation commands subcommand autocomplete and `--help` output.
+- Register extension entry points explicitly in `package.json`.
+- Use standard tools and visible commands rather than hidden automation.
+- Do not commit credentials, Pi session state, generated package archives, or local lab state.
 
-Validate package contents before release:
+Read [`context.md`](context.md) before changing repository architecture.
+
+Validate changes before release:
 
 ```bash
+npm test
+npm run typecheck
 npm pack --dry-run
 ```
-
-`plan.md` is development-only and must remain excluded from the package.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isPublicIp, validatePublicUrl } from "../src/network.ts";
+import { isPublicIp, validatePublicUrl } from "../../extensions/web-tools/network.ts";
 
 const blocked = [
   "127.0.0.1",

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readSseEvents } from "../src/sse.ts";
+import { readSseEvents } from "../../extensions/web-tools/sse.ts";
 
 test("reads JSON SSE events and stops when requested", async () => {
   const body = [

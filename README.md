@@ -1,98 +1,71 @@
-# pi-poc
+# pi-workbench
 
-**A Pi skill named `poc` for disposable Docker proof-of-concept environments.**
+A personal workbench of reusable [Pi](https://pi.dev) extensions, skills, and agent workflows.
 
-`poc` teaches Pi and other Agent Skills-compatible coding agents to launch, operate, materialize, and delete Docker environments for testing a thesis or approach first. OrbStack is the primary macOS backend. There is no custom CLI: Pi and humans use standard Docker and Git commands.
+This repository is the merged successor to `pi-lab` and `pi-web-tools`. It is one Pi package with isolated capability directories, one validation workflow, and one pinned installation.
 
-## Mental model
+## Included
 
-```text
-Pi on host
-  ├── reads and edits a host workspace/worktree
-  └── runs environment commands with docker exec
-          ↓
-       OrbStack Docker Engine
-```
+### Extensions
 
-A POC has one lifecycle:
+- **Living plan** (`extensions/plan-mode`) — persistent project plans with explore, experiment, work, pause, list, and resume flows.
+- **Web tools** (`extensions/web-tools`) — `web_search` through the active OpenAI Codex subscription session and SSRF-resistant `web_fetch` content extraction.
 
-```text
-create -> work -> materialize if useful -> delete
-```
+### Skills
 
-A short experiment is simply a POC deleted immediately after testing. There is no separate “try” abstraction.
+- **local-plan-mode** — guidance for maintaining long-running living plans.
+- **pi-package-workflow** — source, release, and installation conventions for Pi packages.
+- **poc** — disposable Docker/OrbStack proof-of-concept environments.
 
-## Pi mindset
+See [`context.md`](context.md) for the architecture and maintenance conventions.
 
-The skill is deliberately small and transparent:
+## Install
 
-- Pi remains the editor/orchestrator on the host;
-- containers provide runtime/dependency isolation, not a promise of hostile-code containment;
-- standard Docker and Git commands stay visible;
-- destructive actions, public exposure, and host application are previewed and require approval;
-- useful results are materialized as reviewable files, scripts, commits, or docs.
-
-## What the skill adds
-
-- safe requirements gathering;
-- predictable names and ownership labels;
-- loopback-only port defaults;
-- read-only mount defaults;
-- Git worktrees for repository development;
-- a standard Ubuntu toolbox with container-only sudo;
-- exact cleanup previews;
-- guidance for turning useful work into repository artifacts.
-
-Routine operations remain standard:
+Install a pinned release:
 
 ```bash
-docker ps --filter label=dev.poc.managed=true
-docker exec -it poc-demo bash
-docker logs -f poc-demo
-docker stop poc-demo
-docker start poc-demo
+pi install git:github.com/NhanChau2409/pi-workbench@v0.2.0
 ```
 
-## Install in Pi
+Use `/reload` in an existing Pi session after updating.
 
-From Git after the repository is published:
+## Living-plan command
 
-```bash
-pi install git:github.com/NhanChau2409/pi-poc@v0.1.0
-```
-
-For local development:
-
-```bash
-pi install /absolute/path/to/pi-poc
-```
-
-Then use the skill command or natural language:
+Type `/plan ` to see native subcommand suggestions, or use:
 
 ```text
-/skill:poc create demo to test this thesis with <tool>
-/skill:poc create feature-auth from the current repository with port 3000
-/skill:poc show
-/skill:poc update feature-auth to add port 9229
-/skill:poc materialize feature-auth into the repository
-/skill:poc delete feature-auth
+/plan --help
+/plan new <desired-state>
+/plan list
+/plan resume [plan-file]
+/plan explore [focus]
+/plan experiment [focus]
+/plan work [goal]
+/plan pause
+/plan show
+/plan close
 ```
 
-## Requirements
+Plans are stored under the active project's `.pi/plans/` directory.
 
-- Pi
-- Docker-compatible CLI and Engine
-- OrbStack recommended on macOS
-- Git for repository worktrees
+## Web tools
 
-The Docker CLI is a client; OrbStack remains the engine. This package has no runtime dependencies and installs no global executable.
+- `web_search` uses OpenAI native web search through the selected `openai-codex-responses` model and Pi's existing OAuth credential.
+- `web_fetch` reads public HTTP(S) pages, rejects credentials and private addresses, validates redirects, limits downloads, and marks fetched content as untrusted.
 
-## Safety
+Requirements: Pi 0.85.1+, Node.js 22+, and `/login` for OpenAI Codex when using `web_search`.
 
-Containers reduce accidental host modification but are not a perfect boundary for hostile code. The skill does not mount host credentials, home, Pi state, or the Docker socket by default. Public ports, direct checkout writes, destructive cleanup, host application, and deployment require explicit approval.
+## Development
 
-See the skill references for lifecycle, safety, and materialization details.
+```bash
+npm install
+npm test
+npm run typecheck
+npm pack --dry-run
+```
+
+Develop here rather than inside Pi's installed clone under `~/.pi/agent/git/`.
 
 ## License
 
-[MIT](LICENSE)
+MIT. See [`NOTICE.md`](NOTICE.md) for web-tool provenance.

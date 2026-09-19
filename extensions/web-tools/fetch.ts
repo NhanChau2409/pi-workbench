@@ -105,7 +105,7 @@ export async function fetchPage(rawUrl: string, options: FetchPageOptions = {}):
       const response = await fetch(url, {
         headers: {
           Accept: "text/html, text/plain, application/json, application/xml;q=0.9, */*;q=0.1",
-          "User-Agent": "pi-web-tools/0.1 (+https://github.com/NhanChau2409)",
+          "User-Agent": "pi-workbench/0.2 (+https://github.com/NhanChau2409/pi-workbench)",
         },
         redirect: "manual",
         signal,

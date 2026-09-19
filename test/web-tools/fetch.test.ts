@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { extractReadableContent } from "../src/fetch.ts";
+import { extractReadableContent } from "../../extensions/web-tools/fetch.ts";
 
 test("extracts readable HTML and omits scripts and navigation", () => {
   const result = extractReadableContent(`

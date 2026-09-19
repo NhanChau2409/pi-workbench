@@ -1,6 +1,6 @@
 ---
 name: pi-package-workflow
-description: Use when creating or changing Pi custom resources such as extensions, skills, prompt templates, themes, model/provider settings, or package manifests. Enforces a central GitHub Pi package workflow: build in the source repository, commit/push/tag there, then install or update with pi install/update instead of wiring local paths into Pi settings.
+description: "Use when creating or changing Pi custom resources such as extensions, skills, prompt templates, themes, model/provider settings, or package manifests. Enforces a central GitHub Pi package workflow: build in the source repository, commit/push/tag there, then install or update with pi install/update instead of wiring local paths into Pi settings."
 compatibility: Requires git and pi. GitHub push requires repository access. Optional TypeScript/npm only when building extensions.
 license: MIT
 ---
@@ -42,7 +42,7 @@ Prefer an explicit `package.json` manifest:
 
 ```json
 {
-  "name": "pi-lab",
+  "name": "pi-workbench",
   "version": "0.1.0",
   "keywords": ["pi-package"],
   "pi": {
@@ -61,10 +61,10 @@ Only include keys that the package actually provides.
 1. Identify the canonical GitHub package repository.
    - Check `git remote -v`.
    - Do not edit Pi's installed clone under `~/.pi/agent/git/...` unless it is only a temporary inspection.
-   - If the user has no central repo yet, create or recommend one, for example `github.com/<owner>/pi-lab`.
+   - If the user has no central repo yet, create or recommend one, for example `github.com/<owner>/pi-workbench`.
 
 2. Add or change the resource in the repo.
-   - Extension: create/update `src/index.ts` or `extensions/*.ts` and register tools/commands/events there.
+   - Extension: create/update `extensions/<name>/index.ts`, keep its modules beside it, and register tools/commands/events there.
    - Skill: create `skills/<skill-name>/SKILL.md` with valid frontmatter.
    - Prompt template: create `prompts/<command>.md` with optional frontmatter.
    - Theme: create `themes/<name>.json`.
@@ -72,7 +72,7 @@ Only include keys that the package actually provides.
 
 3. Validate locally without installing a permanent local path.
    - For package structure: `npm pkg get pi` if package.json exists.
-   - For extensions: run typecheck/tests when available, or temporarily use `pi -e ./src/index.ts`.
+   - For extensions: run typecheck/tests when available, or temporarily use `pi -e ./extensions/<name>/index.ts`.
    - For skills/prompts/themes: inspect paths and frontmatter; run Pi with the package only if needed.
 
 4. Commit and push to GitHub.

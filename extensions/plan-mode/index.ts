@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -25,6 +25,33 @@ type PlanState = {
 };
 
 const STATE_ENTRY = "local-living-plan-state";
+const PLAN_HELP = `Usage: /plan <subcommand> [arguments]
+
+Subcommands:
+  new <desired-state>    Start a new living plan
+  list                   List saved plans in this project
+  resume [plan-file]     Resume the current or a saved plan in explore mode
+  explore [focus]        Switch to read-only exploration
+  experiment [focus]     Run a disposable experiment
+  work [goal]            Implement one meaningful goal
+  pause                   Pause while preserving plan state
+  show                    Show the active plan and HEAD
+  close                   Close the active plan
+  help, --help, -h        Show this help
+
+Shorthand: /plan <desired-state> starts a new plan.`;
+const PLAN_SUBCOMMANDS = [
+  ["new", "Start a new living plan"],
+  ["list", "List saved plans"],
+  ["resume", "Resume a saved plan"],
+  ["explore", "Switch to read-only exploration"],
+  ["experiment", "Run a disposable experiment"],
+  ["work", "Implement one meaningful goal"],
+  ["pause", "Pause and preserve state"],
+  ["show", "Show plan status"],
+  ["close", "Close the active plan"],
+  ["--help", "Show command help"],
+] as const;
 const WRITE_TOOLS = new Set(["edit", "write"]);
 const PLAN_TOOLS = ["plan_checkpoint", "plan_goal_done"];
 const SAFE_COMMANDS = new Set([
@@ -42,6 +69,20 @@ function slugify(input: string): string {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function plansDirectory(cwd: string): string {
+  return join(cwd, ".pi", "plans");
+}
+
+function listSavedPlans(cwd: string): string[] {
+  const directory = plansDirectory(cwd);
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
 }
 
 function initialPlan(topic: string): string {
@@ -87,6 +128,7 @@ function modeInstructions(state: PlanState): string {
 
 export default function livingPlanExtension(pi: ExtensionAPI) {
   let state = emptyState();
+  let commandCwd = process.cwd();
 
   function persist(): void {
     pi.appendEntry(STATE_ENTRY, state);
@@ -180,11 +222,38 @@ export default function livingPlanExtension(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("plan", {
-    description: "Manage a persistent living plan: explore, experiment, work, pause, resume, show, close",
+    description: "Manage persistent living plans (use /plan --help)",
+    getArgumentCompletions: (prefix) => {
+      const resume = /^resume\s+(.*)$/.exec(prefix);
+      if (resume) {
+        const query = resume[1] ?? "";
+        const plans = listSavedPlans(commandCwd)
+          .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
+          .map((name) => ({ value: `resume ${name}`, label: name, description: "Resume saved plan" }));
+        return plans.length ? plans : null;
+      }
+
+      const query = prefix.trim().toLowerCase();
+      if (query.includes(" ")) return null;
+      const commands = PLAN_SUBCOMMANDS
+        .filter(([name]) => name.startsWith(query))
+        .map(([name, description]) => ({ value: name, label: name, description }));
+      return commands.length ? commands : null;
+    },
     handler: async (args, ctx) => {
       const input = args.trim();
-      const [command, ...rest] = input.split(/\s+/);
+      const [command = "", ...rest] = input.split(/\s+/);
 
+      if (command === "help" || command === "--help" || command === "-h") {
+        ctx.ui.notify(PLAN_HELP, "info");
+        return;
+      }
+      if (command === "list") {
+        const plans = listSavedPlans(ctx.cwd);
+        const lines = plans.map((name) => `${state.planPath === join(plansDirectory(ctx.cwd), name) ? "*" : " "} ${name}`);
+        ctx.ui.notify(lines.length ? `Saved plans:\n${lines.join("\n")}` : "No saved plans in this project.", "info");
+        return;
+      }
       if (command === "pause") {
         pause(ctx);
         ctx.ui.notify("Living plan paused; state is preserved.", "info");
@@ -199,23 +268,58 @@ export default function livingPlanExtension(pi: ExtensionAPI) {
         ctx.ui.notify(state.planPath ? `${state.mode}: ${state.planPath}\nHEAD: ${state.focus ?? "unset"}` : "No living plan exists.", "info");
         return;
       }
-      if (command === "resume" || command === "explore" || command === "experiment" || command === "work") {
+      if (command === "resume") {
+        const requested = rest.join(" ");
+        if (requested) {
+          const match = listSavedPlans(ctx.cwd).find((name) => name === requested || name.replace(/\.md$/, "") === requested);
+          if (!match) {
+            ctx.ui.notify(`Saved plan not found: ${requested}. Use /plan list.`, "warning");
+            return;
+          }
+          const path = join(plansDirectory(ctx.cwd), match);
+          const markdown = readFileSync(path, "utf8");
+          const toolsBeforePlan = state.toolsBeforePlan;
+          state = {
+            active: true,
+            mode: "explore",
+            topic: markdown.match(/^#\s+(.+)$/m)?.[1] ?? match.replace(/\.md$/, ""),
+            planPath: path,
+            markdown,
+            focus: `Resume ${match}`,
+            goals: extractGoals(markdown),
+            toolsBeforePlan,
+            checkpoint: 0,
+          };
+        }
         if (!state.planPath) {
-          ctx.ui.notify("No saved plan. Start with /plan <desired state>.", "warning");
+          ctx.ui.notify("No plan selected. Use /plan resume <plan-file> or /plan list.", "warning");
           return;
         }
-        const mode = command === "resume" ? "explore" : command;
-        switchMode(mode, ctx);
+        switchMode("explore", ctx);
+        ctx.ui.notify(`Living plan resumed: ${state.planPath}`, "info");
+        return;
+      }
+      if (command === "explore" || command === "experiment" || command === "work") {
+        if (!state.planPath) {
+          ctx.ui.notify("No saved plan. Start with /plan new <desired-state>.", "warning");
+          return;
+        }
+        switchMode(command, ctx);
         if (rest.length) state.focus = rest.join(" ");
         updateUI(ctx);
         persist();
-        ctx.ui.notify(`Living plan resumed in ${mode} mode.`, "info");
+        ctx.ui.notify(`Living plan switched to ${command} mode.`, "info");
         return;
       }
 
-      const topic = input || await ctx.ui.input("Living Plan", "What desired state are we working toward?");
+      if (command.startsWith("-")) {
+        ctx.ui.notify(`Unknown option: ${command}. Use /plan --help.`, "warning");
+        return;
+      }
+      const topicInput = command === "new" ? rest.join(" ") : input;
+      const topic = topicInput || await ctx.ui.input("Living Plan", "What desired state are we working toward?");
       if (!topic) return;
-      const directory = join(ctx.cwd, ".pi", "plans");
+      const directory = plansDirectory(ctx.cwd);
       mkdirSync(directory, { recursive: true });
       const path = join(directory, `${today()}-${slugify(topic)}.md`);
       const markdown = initialPlan(topic);
@@ -254,6 +358,7 @@ export default function livingPlanExtension(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    commandCwd = ctx.cwd;
     const saved = ctx.sessionManager.getEntries()
       .filter((entry: any) => entry.type === "custom" && entry.customType === STATE_ENTRY)
       .pop() as { data?: PlanState } | undefined;
