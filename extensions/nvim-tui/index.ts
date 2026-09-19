@@ -28,10 +28,10 @@ class NvimTuiEditor extends CustomEditor {
     private readonly appTui: TUI,
     theme: ConstructorParameters<typeof CustomEditor>[1],
     keybindings: ConstructorParameters<typeof CustomEditor>[2],
-    private readonly updateStatus: (mode: Mode, target: TargetWindow) => void,
+    private readonly updateStatus: (mode: Mode) => void,
   ) {
     super(appTui, theme, keybindings);
-    this.updateStatus(this.mode, this.target);
+    this.updateStatus(this.mode);
   }
 
   handleInput(data: string): void {
@@ -77,7 +77,7 @@ class NvimTuiEditor extends CustomEditor {
     const lines = super.render(width);
     if (lines.length === 0) return lines;
 
-    const label = ` ${this.mode.toUpperCase()} ${this.target} `;
+    const label = ` ${this.mode.toUpperCase()} `;
     const last = lines.length - 1;
     lines[last] = truncateToWidth(lines[last]!, Math.max(0, width - label.length), "") + label;
     return lines;
@@ -116,13 +116,13 @@ class NvimTuiEditor extends CustomEditor {
 
   private setMode(mode: Mode): void {
     this.mode = mode;
-    this.updateStatus(this.mode, this.target);
+    this.updateStatus(this.mode);
     this.appTui.requestRender();
   }
 
   private setTarget(target: TargetWindow): void {
     this.target = target;
-    this.updateStatus(this.mode, this.target);
+    this.updateStatus(this.mode);
     this.appTui.requestRender();
   }
 }
@@ -132,8 +132,8 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
     if (ctx.mode !== "tui") return;
 
     ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new NvimTuiEditor(tui, theme, keybindings, (mode, target) => {
-        ctx.ui.setStatus("nvim-tui", `[${mode.toUpperCase()}][${target}]`);
+      new NvimTuiEditor(tui, theme, keybindings, (mode) => {
+        ctx.ui.setStatus("nvim-tui", `[${mode.toUpperCase()}]`);
       }),
     );
   });
