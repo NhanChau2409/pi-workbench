@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -32,11 +32,14 @@ test("plan command suggests subcommands and saved plans and exposes help", async
   assert.ok(command);
 
   const notifications: string[] = [];
+  let confirmRemoval = false;
   const ctx = {
     cwd,
+    hasUI: true,
     sessionManager: { getEntries: () => [] },
     ui: {
       notify: (message: string) => notifications.push(message),
+      confirm: async () => confirmRemoval,
       setStatus() {},
       setWidget() {},
     },
@@ -49,6 +52,18 @@ test("plan command suggests subcommands and saved plans and exposes help", async
 
   const plans = command.getArgumentCompletions?.("resume example") ?? [];
   assert.deepEqual(plans.map((item) => item.value), ["resume 2026-09-19-example.md"]);
+  const removable = command.getArgumentCompletions?.("remove example") ?? [];
+  assert.deepEqual(removable.map((item) => item.value), ["remove 2026-09-19-example.md"]);
+
+  const planPath = join(plansDir, "2026-09-19-example.md");
+  await command.handler("remove 2026-09-19-example.md", ctx);
+  assert.equal(existsSync(planPath), true);
+  assert.equal(notifications.at(-1), "Plan removal cancelled.");
+
+  confirmRemoval = true;
+  await command.handler("remove 2026-09-19-example.md", ctx);
+  assert.equal(existsSync(planPath), false);
+  assert.equal(notifications.at(-1), "Removed saved plan: 2026-09-19-example.md");
 
   await command.handler("--help", ctx);
   assert.match(notifications.at(-1) ?? "", /Usage: \/plan/);

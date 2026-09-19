@@ -38,6 +38,7 @@ Type `/plan ` to see native subcommand suggestions, or use:
 /plan new <desired-state>
 /plan list
 /plan resume [plan-file]
+/plan remove <plan-file>
 /plan explore [focus]
 /plan experiment [focus]
 /plan work [goal]

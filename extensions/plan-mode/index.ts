@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -31,6 +31,7 @@ Subcommands:
   new <desired-state>    Start a new living plan
   list                   List saved plans in this project
   resume [plan-file]     Resume the current or a saved plan in explore mode
+  remove <plan-file>     Permanently remove a saved plan after confirmation
   explore [focus]        Switch to read-only exploration
   experiment [focus]     Run a disposable experiment
   work [goal]            Implement one meaningful goal
@@ -44,6 +45,7 @@ const PLAN_SUBCOMMANDS = [
   ["new", "Start a new living plan"],
   ["list", "List saved plans"],
   ["resume", "Resume a saved plan"],
+  ["remove", "Remove a saved plan"],
   ["explore", "Switch to read-only exploration"],
   ["experiment", "Run a disposable experiment"],
   ["work", "Implement one meaningful goal"],
@@ -224,12 +226,17 @@ export default function livingPlanExtension(pi: ExtensionAPI) {
   pi.registerCommand("plan", {
     description: "Manage persistent living plans (use /plan --help)",
     getArgumentCompletions: (prefix) => {
-      const resume = /^resume\s+(.*)$/.exec(prefix);
-      if (resume) {
-        const query = resume[1] ?? "";
+      const planTarget = /^(resume|remove)\s+(.*)$/.exec(prefix);
+      if (planTarget) {
+        const action = planTarget[1] as "resume" | "remove";
+        const query = planTarget[2] ?? "";
         const plans = listSavedPlans(commandCwd)
           .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
-          .map((name) => ({ value: `resume ${name}`, label: name, description: "Resume saved plan" }));
+          .map((name) => ({
+            value: `${action} ${name}`,
+            label: name,
+            description: action === "resume" ? "Resume saved plan" : "Remove saved plan",
+          }));
         return plans.length ? plans : null;
       }
 
@@ -252,6 +259,32 @@ export default function livingPlanExtension(pi: ExtensionAPI) {
         const plans = listSavedPlans(ctx.cwd);
         const lines = plans.map((name) => `${state.planPath === join(plansDirectory(ctx.cwd), name) ? "*" : " "} ${name}`);
         ctx.ui.notify(lines.length ? `Saved plans:\n${lines.join("\n")}` : "No saved plans in this project.", "info");
+        return;
+      }
+      if (command === "remove") {
+        const requested = rest.join(" ");
+        if (!requested) {
+          ctx.ui.notify("Choose a plan to remove. Use /plan remove <plan-file>.", "warning");
+          return;
+        }
+        const match = listSavedPlans(ctx.cwd).find((name) => name === requested || name.replace(/\.md$/, "") === requested);
+        if (!match) {
+          ctx.ui.notify(`Saved plan not found: ${requested}. Use /plan list.`, "warning");
+          return;
+        }
+        if (!ctx.hasUI) {
+          ctx.ui.notify("Removing a plan requires interactive confirmation.", "warning");
+          return;
+        }
+        const path = join(plansDirectory(ctx.cwd), match);
+        const confirmed = await ctx.ui.confirm("Remove saved plan?", `${match}\n\nThis cannot be undone.`);
+        if (!confirmed) {
+          ctx.ui.notify("Plan removal cancelled.", "info");
+          return;
+        }
+        if (state.planPath === path) close(ctx);
+        unlinkSync(path);
+        ctx.ui.notify(`Removed saved plan: ${match}`, "info");
         return;
       }
       if (command === "pause") {
