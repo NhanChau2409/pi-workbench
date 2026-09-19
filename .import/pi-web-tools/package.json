@@ -1,0 +1,45 @@
+{
+  "name": "@nhanchau/pi-web-tools",
+  "version": "0.1.0",
+  "description": "Owned Pi web_search and web_fetch tools for OpenAI Codex subscription sessions.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "web-search",
+    "web-fetch",
+    "openai-codex"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "html-to-text": "^10.0.0",
+    "ipaddr.js": "^2.2.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.85.1",
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "@types/html-to-text": "^9.0.4",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.2"
+  }
+}
