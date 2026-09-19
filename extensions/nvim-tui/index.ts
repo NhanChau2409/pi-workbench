@@ -37,7 +37,7 @@ class NvimTuiEditor extends CustomEditor {
   handleInput(data: string): void {
     if (this.pendingWindowCommand) {
       this.pendingWindowCommand = false;
-      if (data === "w") this.setTarget(this.target === "editor" ? "transcript" : "editor");
+      if (data === "w") this.toggleTarget();
       else if (data === "k") this.setTarget("transcript");
       else if (data === "j") this.setTarget("editor");
       return;
@@ -45,6 +45,11 @@ class NvimTuiEditor extends CustomEditor {
 
     if (matchesKey(data, "ctrl+w")) {
       this.pendingWindowCommand = true;
+      return;
+    }
+
+    if (this.mode === "normal" && matchesKey(data, "tab")) {
+      this.toggleTarget();
       return;
     }
 
@@ -125,6 +130,10 @@ class NvimTuiEditor extends CustomEditor {
     this.updateStatus(this.mode);
     this.appTui.requestRender();
   }
+
+  private toggleTarget(): void {
+    this.setTarget(this.target === "editor" ? "transcript" : "editor");
+  }
 }
 
 export default function nvimTuiExtension(pi: ExtensionAPI): void {
@@ -132,14 +141,11 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
     if (ctx.mode !== "tui") return;
 
     ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new NvimTuiEditor(tui, theme, keybindings, (mode) => {
-        ctx.ui.setStatus("nvim-tui", `[${mode.toUpperCase()}]`);
-      }),
+      new NvimTuiEditor(tui, theme, keybindings, () => {}),
     );
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
-    ctx.ui.setStatus("nvim-tui", undefined);
     ctx.ui.setEditorComponent(undefined);
   });
 }

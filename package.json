@@ -1,6 +1,6 @@
 {
   "name": "pi-workbench",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "A personal Pi workbench for project workflows, web tools, skills, and prompt templates.",
   "keywords": [
     "pi-package",
