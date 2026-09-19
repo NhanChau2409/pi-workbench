@@ -1,12 +1,15 @@
 {
   "name": "pi-workbench",
-  "version": "0.2.1",
-  "description": "A personal Pi workbench for extensions, skills, and reusable agent workflows.",
+  "version": "0.3.0",
+  "description": "A personal Pi workbench for project workflows, web tools, skills, and prompt templates.",
   "keywords": [
     "pi-package",
     "pi-extension",
     "pi-skill",
     "agent-skills",
+    "project-management",
+    "prompt-template",
+    "tldr",
     "web-search",
     "web-fetch",
     "docker",
@@ -24,6 +27,7 @@
   "type": "module",
   "files": [
     "extensions",
+    "prompts/tldr.md",
     "skills",
     "README.md",
     "context.md",
@@ -33,11 +37,15 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions/plan-mode/index.ts",
+      "./extensions/project/index.ts",
       "./extensions/web-tools/index.ts"
     ],
     "skills": [
       "./skills"
+    ],
+    "prompts": [
+      "./prompts/tldr.md",
+      "./prompts/physical.md"
     ]
   },
   "scripts": {

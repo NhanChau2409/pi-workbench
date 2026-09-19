@@ -1,60 +1,75 @@
 # pi-workbench
 
-A personal workbench of reusable [Pi](https://pi.dev) extensions, skills, and agent workflows.
-
-This repository is the merged successor to `pi-lab` and `pi-web-tools`. It is one Pi package with isolated capability directories, one validation workflow, and one pinned installation.
+A personal workbench of reusable [Pi](https://pi.dev) extensions, skills, and prompt templates.
 
 ## Included
 
-### Extensions
+### Project operating system
 
-- **Living plan** (`extensions/plan-mode`) — persistent project plans with explore, experiment, work, pause, list, and resume flows.
-- **Web tools** (`extensions/web-tools`) — `web_search` through the active OpenAI Codex subscription session and SSRF-resistant `web_fetch` content extraction.
-
-### Skills
-
-- **local-plan-mode** — guidance for maintaining long-running living plans.
-- **pi-package-workflow** — source, release, and installation conventions for Pi packages.
-- **poc** — disposable Docker/OrbStack proof-of-concept environments.
-
-See [`context.md`](context.md) for the architecture and maintenance conventions.
-
-## Install
-
-Install a pinned release:
-
-```bash
-pi install git:github.com/NhanChau2409/pi-workbench@v0.2.0
-```
-
-Use `/reload` in an existing Pi session after updating.
-
-## Living-plan command
-
-Type `/plan ` to see native subcommand suggestions, or use:
+A small `/project` interface for long-running work:
 
 ```text
-/plan --help
-/plan new <desired-state>
-/plan list
-/plan resume [plan-file]
-/plan remove <plan-file>
-/plan explore [focus]
-/plan experiment [focus]
-/plan work [goal]
-/plan pause
-/plan show
-/plan close
+/project
+/project new <outcome>
+/project explore <question>
+/project work <near-term outcome>
+/project --help
 ```
 
-Plans are stored under the active project's `.pi/plans/` directory.
+Projects live in the current repository:
 
-## Web tools
+```text
+.pi/projects/<project>/
+├── PLAN.md
+├── project.json
+├── branches/
+├── decisions/
+└── archive/
+```
+
+`PLAN.md` is the concise project picture and is designed to be read or edited in any Markdown editor. Explore branches reduce uncertainty through evidence; work branches produce verified increments. Multiple Pi sessions can work on independent branches, while revision checks prevent silent overwrites during integration.
+
+The extension gives the agent two tools:
+
+- `project_checkpoint` records material branch progress or evidence.
+- `project_integrate` completes a branch and safely updates the latest project plan.
+
+Version 0.3 replaces the former `/plan` living-plan extension with `/project`.
+
+### Universal TL;DR
+
+`/tldr` is a prompt template for any material, not a project-specific feature:
+
+```text
+/tldr
+/tldr README.md
+/tldr src/auth
+/tldr https://example.com/article
+/tldr .pi/projects/passkeys/PLAN.md
+/tldr this error log, focus on the likely cause
+```
+
+It adapts its output to conversations, documents, projects, code, research, URLs, and logs.
+
+### Web tools
 
 - `web_search` uses OpenAI native web search through the selected `openai-codex-responses` model and Pi's existing OAuth credential.
 - `web_fetch` reads public HTTP(S) pages, rejects credentials and private addresses, validates redirects, limits downloads, and marks fetched content as untrusted.
 
-Requirements: Pi 0.85.1+, Node.js 22+, and `/login` for OpenAI Codex when using `web_search`.
+### Skills
+
+- **pi-package-workflow** — canonical package development and release workflow.
+- **poc** — disposable Docker/OrbStack proof-of-concept environments.
+
+See [`context.md`](context.md) for architecture and maintenance conventions.
+
+## Install
+
+```bash
+pi install git:github.com/NhanChau2409/pi-workbench@v0.3.0
+```
+
+Use `/reload` in an existing Pi session after updating.
 
 ## Development
 

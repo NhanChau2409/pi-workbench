@@ -4,6 +4,7 @@ Keep `pi-workbench` organized as a collection of small, isolated Pi capabilities
 
 - Put each extension in `extensions/<name>/index.ts` and its tests in `test/<name>/`.
 - Put each skill in `skills/<name>/SKILL.md`, with detailed procedures in local `references/` files.
+- Put reusable prompt templates in `prompts/<command>.md` with descriptions and argument hints.
 - Give multi-operation commands subcommand autocomplete and `--help` output.
 - Register extension entry points explicitly in `package.json`.
 - Use standard tools and visible commands rather than hidden automation.
