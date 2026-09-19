@@ -1,8 +1,8 @@
 ---
-description: Show the physical repo/code behind the current idea
+description: Show the technical repo/code behind the current idea
 argument-hint: "[idea or focus]"
 ---
-Show me physically${ARGUMENTS:+: $ARGUMENTS}.
+Show me technically${ARGUMENTS:+: $ARGUMENTS}.
 
 Be adaptive to the current question. Do not give abstract theory unless needed.
 
