@@ -21,7 +21,7 @@ const HELP = `Usage: /project [subcommand] [description]
 /project work <outcome>      Build one verified project increment
 /project --help              Show this help
 
-Project files live under .pi/projects/ and remain readable in any editor.`;
+Each project keeps durable vision in PROJECT.md and rolling execution in PLAN.md under .pi/projects/.`;
 const SUBCOMMANDS = [
   ["new", "Start a long-running project"],
   ["explore", "Investigate one uncertainty"],
@@ -107,7 +107,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
     const branch = store.createBranch(projectId, type, title);
     activateBranch(branch);
     const verb = type === "explore" ? "Explore" : "Work toward";
-    pi.sendUserMessage(`${verb}: ${title}\n\nRead ${store.planPath(projectId)} and ${branch.path}. Keep the branch focused. Record material progress with project_checkpoint. When evidence supports a conclusion or the work is verified, integrate it with project_integrate.`);
+    pi.sendUserMessage(`${verb}: ${title}\n\nRead ${store.visionPath(projectId)}, ${store.planPath(projectId)}, and ${branch.path}. Preserve the PROJECT.md vision while keeping the branch focused. Treat POCs as fast feedback loops for reducing uncertainty. Record material progress with project_checkpoint. When evidence supports a conclusion or the work is verified, integrate it with project_integrate.`);
   }
 
   pi.registerCommand("project", {
@@ -138,7 +138,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
         const branch = store.createBranch(project.metadata.id, "explore", "Shape project direction");
         activateBranch(branch);
         ctx.ui.notify(`Created ${project.path}`, "info");
-        pi.sendUserMessage(`We started a long-running project: ${title}\n\nShape the project direction in ${branch.path}. Clarify the outcome, success evidence, constraints, non-goals, and highest-risk uncertainty. Update the branch with project_checkpoint, then integrate a concise rolling PLAN.md with project_integrate.`);
+        pi.sendUserMessage(`We started a long-running project: ${title}\n\nShape the durable vision in ${store.visionPath(project.metadata.id)} and the rolling direction in ${branch.path}. Clarify the long-term vision, intended experience, milestones, current outcome, success evidence, constraints, non-goals, and highest-risk uncertainty. Treat POCs as fast feedback loops, not as definitions of the final vision. Update the branch with project_checkpoint, then integrate PROJECT.md and a concise rolling PLAN.md with project_integrate.`);
         return;
       }
 
@@ -171,7 +171,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
       const branchLine = branch
         ? `\nActive branch: ${branch.metadata.id} · ${branch.metadata.type} · ${branch.metadata.title}\nBranch file: ${branch.path}`
         : "";
-      ctx.ui.notify(`${store.brief(projectId)}\nPLAN: ${store.planPath(projectId)}${branchLine}`, "info");
+      ctx.ui.notify(`${store.brief(projectId)}\nPROJECT: ${store.visionPath(projectId)}\nPLAN: ${store.planPath(projectId)}${branchLine}`, "info");
     },
   });
 
@@ -213,14 +213,15 @@ export default function projectExtension(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "project_integrate",
     label: "Project Integrate",
-    description: "Complete the active branch and revision-safely integrate its result into the project's PLAN.md.",
+    description: "Complete the active branch and revision-safely integrate its result into the project's PROJECT.md and PLAN.md.",
     promptSnippet: "Integrate a completed exploration or verified work branch into the project",
     promptGuidelines: [
-      "Use project_integrate only after an exploration has evidence or a work branch has verification; preserve the project's outcome while updating its rolling Now/Next/Later plan.",
+      "Use project_integrate only after an exploration has evidence or a work branch has verification; preserve the durable PROJECT.md vision while updating the rolling PLAN.md Now/Next/Later plan.",
     ],
     parameters: Type.Object({
       branchMarkdown: Type.String({ description: "Complete final branch Markdown without the hidden metadata marker" }),
-      planMarkdown: Type.String({ description: "Complete updated PLAN.md based on the latest project revision" }),
+      projectMarkdown: Type.String({ description: "Complete durable PROJECT.md vision based on the latest project revision" }),
+      planMarkdown: Type.String({ description: "Complete updated rolling PLAN.md based on the latest project revision" }),
       outcome: StringEnum(["adopted", "rejected", "inconclusive", "completed"] as const),
       summary: Type.String({ description: "What the branch established and how the plan changed" }),
       projectStatus: Type.Optional(StringEnum(["active", "completed"] as const, { description: "Mark completed only when project success evidence is satisfied" })),
@@ -246,6 +247,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
           expectedProjectRevision: state.projectRevision,
           expectedBranchRevision: state.branchRevision,
           branchMarkdown: params.branchMarkdown,
+          projectMarkdown: params.projectMarkdown,
           planMarkdown: params.planMarkdown,
           status: params.outcome,
           projectStatus: params.projectStatus,
@@ -270,7 +272,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
         if (error instanceof ProjectRevisionConflict) {
           state.projectRevision = error.metadata.revision;
           persist();
-          throw new Error(`${error.message}\n\nLatest PLAN.md:\n${error.plan}`);
+          throw new Error(`${error.message}\n\nLatest PROJECT.md:\n${error.projectMarkdown}\n\nLatest PLAN.md:\n${error.plan}`);
         }
         if (error instanceof BranchRevisionConflict) {
           state.branchRevision = error.branch.metadata.revision;
@@ -292,7 +294,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
     }
     if (!state.branchId) {
       return {
-        systemPrompt: `${event.systemPrompt}\n\n[PROJECT ACTIVE]\nProject: ${project.metadata.title}\nPLAN: ${store.planPath(project.metadata.id)}\nTreat PLAN.md as the concise project trunk. Start an explore or work branch before changing project direction.`,
+        systemPrompt: `${event.systemPrompt}\n\n[PROJECT ACTIVE]\nProject: ${project.metadata.title}\nPROJECT: ${store.visionPath(project.metadata.id)}\nPLAN: ${store.planPath(project.metadata.id)}\nTreat PROJECT.md as the durable vision and PLAN.md as the concise rolling execution trunk. Preserve the vision across fast-feedback POCs. Start an explore or work branch before changing project direction. Always end user-facing project responses with the concrete next step.`,
       };
     }
     const branch = store.readBranch(state.projectId, state.branchId);
@@ -301,7 +303,7 @@ export default function projectExtension(pi: ExtensionAPI): void {
       ? `Mode: EXPLORE. Reduce one uncertainty through evidence. Do not mutate the project checkout. Use read-only research or disposable files under ${explorationDirectory}, /tmp, containers, or isolated worktrees. An exploration may be adopted, rejected, or remain inconclusive.`
       : "Mode: WORK. Produce one bounded project increment and verify its completion evidence. Record discoveries that materially change the project.";
     return {
-      systemPrompt: `${event.systemPrompt}\n\n[PROJECT BRANCH ACTIVE]\nProject: ${project.metadata.title}\nPLAN: ${store.planPath(project.metadata.id)}\nBranch: ${branch.path}\n${instructions}\nUse project_checkpoint for material branch updates. Use project_integrate only when evidence supports integration into the latest PLAN.md.`,
+      systemPrompt: `${event.systemPrompt}\n\n[PROJECT BRANCH ACTIVE]\nProject: ${project.metadata.title}\nPROJECT: ${store.visionPath(project.metadata.id)}\nPLAN: ${store.planPath(project.metadata.id)}\nBranch: ${branch.path}\n${instructions}\nTreat POCs as fast feedback loops that reduce uncertainty without shrinking the PROJECT.md vision. Use project_checkpoint for material branch updates. Use project_integrate only when evidence supports revision-safe integration into PROJECT.md and PLAN.md. Always end user-facing project responses with the concrete next step.`,
     };
   });
 

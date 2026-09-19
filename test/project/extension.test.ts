@@ -57,11 +57,13 @@ test("project command exposes a small interface and creates editor-friendly proj
 
     await command.handler("new Replace passwords with passkeys", ctx);
     const root = join(cwd, ".pi", "projects", "replace-passwords-with-passkeys");
+    assert.equal(existsSync(join(root, "PROJECT.md")), true);
     assert.equal(existsSync(join(root, "PLAN.md")), true);
     assert.equal(existsSync(join(root, "project.json")), true);
     assert.equal(existsSync(join(root, "branches", "EXP-001-shape-project-direction.md")), true);
     assert.equal(entries.length > 0, true);
     assert.match(messages.at(-1) ?? "", /long-running project/);
+    assert.match(messages.at(-1) ?? "", /PROJECT\.md/);
 
     await command.handler("explore Test account recovery", ctx);
     assert.equal(existsSync(join(root, "branches", "EXP-002-test-account-recovery.md")), true);

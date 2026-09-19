@@ -20,14 +20,15 @@ Projects live in the current repository:
 
 ```text
 .pi/projects/<project>/
-├── PLAN.md
+├── PROJECT.md       # durable vision, principles, and milestone horizon
+├── PLAN.md          # concise rolling Now/Next/Later execution plan
 ├── project.json
 ├── branches/
 ├── decisions/
 └── archive/
 ```
 
-`PLAN.md` is the concise project picture and is designed to be read or edited in any Markdown editor. Explore branches reduce uncertainty through evidence; work branches produce verified increments. Multiple Pi sessions can work on independent branches, while revision checks prevent silent overwrites during integration.
+`PROJECT.md` preserves the long-term vision so fast-feedback experiments do not accidentally redefine the destination. `PLAN.md` is the concise rolling execution picture. Both are readable in any Markdown editor and integrated revision-safely. Explore branches reduce uncertainty through evidence; work branches produce verified increments. Multiple Pi sessions can work on independent branches, while revision checks prevent silent overwrites during integration.
 
 The extension gives the agent two tools:
 

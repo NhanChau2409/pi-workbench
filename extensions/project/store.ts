@@ -18,9 +18,11 @@ import {
   parseBranch,
   projectBrief,
   projectPlanTemplate,
+  projectVisionTemplate,
   serializeBranch,
   slugify,
   validatePlan,
+  validateProject,
   type BranchDocument,
   type BranchMetadata,
   type BranchStatus,
@@ -35,13 +37,18 @@ export class BranchRevisionConflict extends Error {
 }
 
 export class ProjectRevisionConflict extends Error {
-  constructor(public readonly metadata: ProjectMetadata, public readonly plan: string) {
-    super(`Project changed to revision ${metadata.revision}; reconcile the latest PLAN.md before retrying.`);
+  constructor(
+    public readonly metadata: ProjectMetadata,
+    public readonly projectMarkdown: string,
+    public readonly plan: string,
+  ) {
+    super(`Project changed to revision ${metadata.revision}; reconcile the latest PROJECT.md and PLAN.md before retrying.`);
   }
 }
 
 type ProjectRecord = {
   metadata: ProjectMetadata;
+  projectMarkdown: string;
   plan: string;
   path: string;
 };
@@ -50,6 +57,7 @@ type IntegrationInput = {
   expectedProjectRevision: number;
   expectedBranchRevision: number;
   branchMarkdown: string;
+  projectMarkdown: string;
   planMarkdown: string;
   status: Exclude<BranchStatus, "active">;
   projectStatus?: "active" | "completed";
@@ -95,6 +103,10 @@ export class ProjectStore {
 
   private metadataPath(projectId: string): string {
     return join(this.projectPath(projectId), "project.json");
+  }
+
+  visionPath(projectId: string): string {
+    return join(this.projectPath(projectId), "PROJECT.md");
   }
 
   planPath(projectId: string): string {
@@ -147,12 +159,23 @@ export class ProjectStore {
 
   readProject(projectId: string): ProjectRecord {
     const path = this.projectPath(projectId);
-    const metadata = JSON.parse(readFileSync(this.metadataPath(projectId), "utf8")) as ProjectMetadata;
+    let metadata = JSON.parse(readFileSync(this.metadataPath(projectId), "utf8")) as ProjectMetadata;
     const plan = readFileSync(this.planPath(projectId), "utf8");
     if (metadata.schemaVersion !== 1 || metadata.id !== projectId || !metadata.planHash) {
       throw new Error(`Unsupported project metadata: ${this.metadataPath(projectId)}`);
     }
-    return { metadata, plan, path };
+
+    const projectPath = this.visionPath(projectId);
+    const projectMarkdown = existsSync(projectPath)
+      ? readFileSync(projectPath, "utf8")
+      : projectVisionTemplate(metadata.title);
+    if (!existsSync(projectPath)) atomicWrite(projectPath, projectMarkdown);
+    if (!metadata.projectHash) {
+      metadata = { ...metadata, projectHash: contentHash(projectMarkdown) };
+      atomicWrite(this.metadataPath(projectId), `${JSON.stringify(metadata, null, 2)}\n`);
+    }
+
+    return { metadata, projectMarkdown, plan, path };
   }
 
   createProject(title: string): ProjectRecord {
@@ -168,6 +191,7 @@ export class ProjectStore {
     while (existsSync(this.projectPath(projectId))) projectId = `${baseId}-${suffix++}`;
 
     const timestamp = now();
+    const projectMarkdown = projectVisionTemplate(title);
     const plan = projectPlanTemplate(title);
     const metadata: ProjectMetadata = {
       schemaVersion: 1,
@@ -175,6 +199,7 @@ export class ProjectStore {
       title,
       status: "active",
       revision: 0,
+      projectHash: contentHash(projectMarkdown),
       planHash: contentHash(plan),
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -184,8 +209,9 @@ export class ProjectStore {
     mkdirSync(join(path, "decisions"), { recursive: true });
     mkdirSync(join(path, "archive"), { recursive: true });
     atomicWrite(this.metadataPath(projectId), `${JSON.stringify(metadata, null, 2)}\n`);
+    atomicWrite(this.visionPath(projectId), projectMarkdown);
     atomicWrite(this.planPath(projectId), plan);
-    return { metadata, plan, path };
+    return { metadata, projectMarkdown, plan, path };
   }
 
   listBranches(projectId: string, includeArchive = false): BranchDocument[] {
@@ -288,20 +314,23 @@ export class ProjectStore {
         throw new BranchRevisionConflict(branch);
       }
       if (branch.metadata.revision !== input.expectedBranchRevision) throw new BranchRevisionConflict(branch);
+      const actualProjectHash = contentHash(project.projectMarkdown);
       const actualPlanHash = contentHash(project.plan);
-      if (project.metadata.planHash !== actualPlanHash) {
+      if (project.metadata.projectHash !== actualProjectHash || project.metadata.planHash !== actualPlanHash) {
         const reconciledMetadata: ProjectMetadata = {
           ...project.metadata,
           revision: project.metadata.revision + 1,
+          projectHash: actualProjectHash,
           planHash: actualPlanHash,
           updatedAt: now(),
         };
         atomicWrite(this.metadataPath(projectId), `${JSON.stringify(reconciledMetadata, null, 2)}\n`);
-        throw new ProjectRevisionConflict(reconciledMetadata, project.plan);
+        throw new ProjectRevisionConflict(reconciledMetadata, project.projectMarkdown, project.plan);
       }
       if (project.metadata.revision !== input.expectedProjectRevision) {
-        throw new ProjectRevisionConflict(project.metadata, project.plan);
+        throw new ProjectRevisionConflict(project.metadata, project.projectMarkdown, project.plan);
       }
+      validateProject(input.projectMarkdown);
       validatePlan(input.planMarkdown);
 
       let decisionPath: string | undefined;
@@ -328,19 +357,22 @@ export class ProjectStore {
       atomicWrite(branch.path, serializeBranch(branchMetadata, finalBranchMarkdown));
       renameSync(branch.path, archivePath);
 
+      const finalProjectMarkdown = input.projectMarkdown.trimEnd() + "\n";
       const finalPlan = input.planMarkdown.trimEnd() + "\n";
       const projectMetadata: ProjectMetadata = {
         ...project.metadata,
         status: input.projectStatus ?? project.metadata.status,
         revision: project.metadata.revision + 1,
+        projectHash: contentHash(finalProjectMarkdown),
         planHash: contentHash(finalPlan),
         updatedAt: timestamp,
       };
+      atomicWrite(this.visionPath(projectId), finalProjectMarkdown);
       atomicWrite(this.planPath(projectId), finalPlan);
       atomicWrite(this.metadataPath(projectId), `${JSON.stringify(projectMetadata, null, 2)}\n`);
 
       return {
-        project: { metadata: projectMetadata, plan: finalPlan, path: project.path },
+        project: { metadata: projectMetadata, projectMarkdown: finalProjectMarkdown, plan: finalPlan, path: project.path },
         branch: { metadata: branchMetadata, markdown: finalBranchMarkdown.trim(), path: archivePath },
         decisionPath,
       };

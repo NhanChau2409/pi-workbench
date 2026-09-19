@@ -3,12 +3,32 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { projectPlanTemplate } from "../../extensions/project/domain.ts";
+import { projectPlanTemplate, projectVisionTemplate } from "../../extensions/project/domain.ts";
 import {
   BranchRevisionConflict,
   ProjectRevisionConflict,
   ProjectStore,
 } from "../../extensions/project/store.ts";
+
+test("project store migrates legacy projects to durable PROJECT.md vision", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "pi-workbench-project-migration-"));
+  try {
+    const store = new ProjectStore(cwd);
+    const created = store.createProject("Build a personal agent platform");
+    const metadataPath = join(created.path, "project.json");
+    const legacyMetadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    delete legacyMetadata.projectHash;
+    writeFileSync(metadataPath, `${JSON.stringify(legacyMetadata, null, 2)}\n`, "utf8");
+    rmSync(store.visionPath(created.metadata.id));
+
+    const migrated = store.readProject(created.metadata.id);
+    assert.match(migrated.projectMarkdown, /## Vision/);
+    assert.equal(existsSync(store.visionPath(created.metadata.id)), true);
+    assert.equal(typeof migrated.metadata.projectHash, "string");
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
 
 test("project store manages independent branches and revision-safe integration", () => {
   const cwd = mkdtempSync(join(tmpdir(), "pi-workbench-project-"));
@@ -17,6 +37,7 @@ test("project store manages independent branches and revision-safe integration",
     const project = store.createProject("Replace passwords with passkeys");
     assert.equal(project.metadata.revision, 0);
     assert.equal(readFileSync(join(cwd, ".pi", ".gitignore"), "utf8"), "runtime/\n");
+    assert.match(readFileSync(store.visionPath(project.metadata.id), "utf8"), /## Vision/);
     assert.match(store.brief(project.metadata.id), /Outcome:/);
 
     const exploration = store.createBranch(project.metadata.id, "explore", "Test account recovery");
@@ -47,6 +68,8 @@ test("project store manages independent branches and revision-safe integration",
     const reconciledBranch = store.readBranch(project.metadata.id, exploration.metadata.id);
     assert.equal(reconciledBranch.metadata.revision, 2);
 
+    const firstProjectMarkdown = projectVisionTemplate(project.metadata.title)
+      .replace("_What future are we trying to create, beyond the first milestone?_", "Passwords are replaced with recoverable passkeys.");
     const firstPlan = projectPlanTemplate(project.metadata.title)
       .replace("Establish the project direction", "Adopt recovery codes")
       .replace("Project created  ", "Use recovery codes  ");
@@ -54,6 +77,7 @@ test("project store manages independent branches and revision-safe integration",
       expectedProjectRevision: 0,
       expectedBranchRevision: 2,
       branchMarkdown: reconciledBranch.markdown,
+      projectMarkdown: firstProjectMarkdown,
       planMarkdown: firstPlan,
       status: "adopted",
       decision: {
@@ -72,6 +96,7 @@ test("project store manages independent branches and revision-safe integration",
         expectedProjectRevision: 0,
         expectedBranchRevision: 0,
         branchMarkdown: work.markdown,
+        projectMarkdown: firstProjectMarkdown,
         planMarkdown: firstPlan,
         status: "completed",
       }),
@@ -86,6 +111,7 @@ test("project store manages independent branches and revision-safe integration",
         expectedProjectRevision: 1,
         expectedBranchRevision: 0,
         branchMarkdown: work.markdown,
+        projectMarkdown: firstProjectMarkdown,
         planMarkdown: manuallyEditedPlan,
         status: "completed",
       }),
@@ -99,6 +125,7 @@ test("project store manages independent branches and revision-safe integration",
       expectedProjectRevision: 2,
       expectedBranchRevision: 0,
       branchMarkdown: work.markdown.replace("_Pending._", "Registration verified."),
+      projectMarkdown: firstProjectMarkdown,
       planMarkdown: secondPlan,
       status: "completed",
     });

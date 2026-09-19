@@ -8,6 +8,7 @@ export type ProjectMetadata = {
   title: string;
   status: ProjectStatus;
   revision: number;
+  projectHash: string;
   planHash: string;
   createdAt: string;
   updatedAt: string;
@@ -39,8 +40,12 @@ export function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 56) || "project";
 }
 
+export function projectVisionTemplate(title: string): string {
+  return `# ${title}\n\n## Vision\n\n_What future are we trying to create, beyond the first milestone?_\n\n## Intended experience\n\n_What should using the completed system feel like?_\n\n## System shape\n\n_What enduring capabilities and boundaries define the envisioned system?_\n\n## Principles\n\n- _Record durable principles that should guide milestone decisions._\n\n## Long-term success\n\n- [ ] Define evidence that the vision has materially become real\n\n## Non-goals\n\n- _What should this project deliberately never become?_\n\n## Milestone horizon\n\n1. _First meaningful end-to-end capability._\n2. _Next platform or product capability._\n3. _Later expansion._\n`;
+}
+
 export function projectPlanTemplate(title: string): string {
-  return `# ${title}\n\n> **Status:** Active  \n> **Now:** Establish the project direction  \n> **Next:** Resolve the most important uncertainty  \n> **Blockers:** None recorded  \n> **Last decision:** Project created  \n> **Next action:** Clarify outcome and success evidence\n\n## Outcome\n\n_What meaningful change should this project create?_\n\n## Success evidence\n\n- [ ] Define observable evidence that the outcome has been achieved\n\n## Constraints and non-goals\n\n- _Record boundaries that should remain stable._\n\n## Now\n\nClarify the outcome, evidence, and highest-risk uncertainty.\n\n## Next\n\n- Explore the highest-risk uncertainty or commit one bounded work outcome.\n\n## Later\n\n- _Keep distant possibilities coarse until more is known._\n\n## Open questions\n\n- What must we learn before making the next commitment?\n\n## Decisions\n\n- Project created.\n`;
+  return `# ${title}\n\n> **Status:** Active  \n> **Vision:** See PROJECT.md  \n> **Now:** Establish the project direction  \n> **Next:** Resolve the most important uncertainty  \n> **Blockers:** None recorded  \n> **Last decision:** Project created  \n> **Next action:** Clarify the vision, outcome, and success evidence\n\n## Outcome\n\n_What meaningful change should the current project horizon create?_\n\n## Success evidence\n\n- [ ] Define observable evidence that the current outcome has been achieved\n\n## Constraints and non-goals\n\n- _Record current boundaries without shrinking the PROJECT.md vision._\n\n## Now\n\nClarify the vision, outcome, evidence, and highest-risk uncertainty.\n\n## Next\n\n- Explore the highest-risk uncertainty or commit one bounded work outcome.\n\n## Later\n\n- _Keep distant milestones aligned with PROJECT.md and coarse until needed._\n\n## Open questions\n\n- What must we learn before making the next commitment?\n\n## Decisions\n\n- Project created.\n`;
 }
 
 export function branchTemplate(type: BranchType, title: string): string {
@@ -66,6 +71,12 @@ export function parseBranch(content: string, path: string): BranchDocument {
   }
   const markdown = content.slice(firstLine.length).trimStart();
   return { metadata, markdown, path };
+}
+
+export function validateProject(markdown: string): void {
+  const required = ["# ", "## Vision", "## Principles", "## Long-term success", "## Milestone horizon"];
+  const missing = required.filter((heading) => !markdown.includes(heading));
+  if (missing.length) throw new Error(`PROJECT.md is missing required sections: ${missing.join(", ")}`);
 }
 
 export function validatePlan(markdown: string): void {
