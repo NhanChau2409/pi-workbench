@@ -51,6 +51,8 @@ Version 0.3 replaces the former `/plan` living-plan extension with `/project`.
 
 It adapts its output to conversations, documents, projects, code, research, URLs, and logs.
 
+`/physical [idea or focus]` complements it by showing the concrete files, code shape, and execution flow behind an idea.
+
 ### Web tools
 
 - `web_search` uses OpenAI native web search through the selected `openai-codex-responses` model and Pi's existing OAuth credential.
@@ -66,7 +68,7 @@ See [`context.md`](context.md) for architecture and maintenance conventions.
 ## Install
 
 ```bash
-pi install git:github.com/NhanChau2409/pi-workbench@v0.3.0
+pi install git:github.com/NhanChau2409/pi-workbench@v0.3.1
 ```
 
 Use `/reload` in an existing Pi session after updating.

@@ -30,6 +30,7 @@ Current capabilities:
 - `extensions/project`: long-running project state with explore and work branches.
 - `extensions/web-tools`: owned `web_search` and `web_fetch` tools.
 - `prompts/tldr.md`: universal summary prompt.
+- `prompts/physical.md`: concise physical repo/code view for an idea or flow.
 - `skills/pi-package-workflow`: canonical package development and release workflow.
 - `skills/poc`: disposable Docker proof-of-concept environments.
 

@@ -1,6 +1,6 @@
 {
   "name": "pi-workbench",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A personal Pi workbench for project workflows, web tools, skills, and prompt templates.",
   "keywords": [
     "pi-package",
@@ -28,6 +28,7 @@
   "files": [
     "extensions",
     "prompts/tldr.md",
+    "prompts/physical.md",
     "skills",
     "README.md",
     "context.md",
