@@ -37,6 +37,12 @@ The extension gives the agent two tools:
 
 Version 0.3 replaces the former `/plan` living-plan extension with `/project`.
 
+### Neovim-like TUI
+
+[`extensions/nvim-tui`](extensions/nvim-tui/README.md) provides modal prompt editing and read-only transcript navigation.
+
+**Transcript focus and navigation require Pi fullscreen mode.** In regular mode the terminal owns scrollback, so extensions cannot control or focus the transcript; only prompt editing works. See the extension README for setup, controls, restart behavior, and the current version-sensitive Pi API limitation.
+
 ### Universal TL;DR
 
 `/tldr` is a prompt template for any material, not a project-specific feature:
@@ -69,7 +75,7 @@ See [`context.md`](context.md) for architecture and maintenance conventions.
 ## Install
 
 ```bash
-pi install git:github.com/NhanChau2409/pi-workbench@v0.3.2
+pi install git:github.com/NhanChau2409/pi-workbench@v0.4.8
 ```
 
 Use `/reload` in an existing Pi session after updating.
