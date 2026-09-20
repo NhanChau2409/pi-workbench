@@ -48,7 +48,7 @@ class NvimTuiEditor extends CustomEditor {
       return;
     }
 
-    if (this.mode === "normal" && matchesKey(data, "tab")) {
+    if (this.mode === "normal" && matchesKey(data, "ctrl+]")) {
       this.toggleTarget();
       return;
     }
