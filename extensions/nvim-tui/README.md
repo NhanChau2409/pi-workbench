@@ -30,7 +30,7 @@ pi --continue --tui-mode fullscreen
 
 Changing the settings file does not replace an already-running regular-screen renderer. Restart Pi, or change **TUI mode** through `/settings`, which applies immediately. `/reload` reloads extension resources but may not replace the renderer mode.
 
-The extension shows a warning ruler when loaded in regular mode rather than silently pretending transcript navigation is available.
+The extension shows a warning notification when loaded in regular mode rather than silently pretending transcript navigation is available.
 
 ## Current controls
 
@@ -43,6 +43,8 @@ The extension shows a warning ruler when loaded in regular mode rather than sile
 - transcript `Ctrl-e` / `Ctrl-y`: one-line viewport scroll
 - transcript `g` / `G`: top/bottom
 - click transcript/editor: change focus in fullscreen
+
+Fullscreen means Pi owns the terminal viewport using its alternate-screen renderer. It does **not** mean maximizing the terminal application's window. Exit any running Pi session before launching `pi --tui-mode fullscreen`; do not start a nested Pi process from inside Pi.
 
 The transcript is read-only, so `i` and `a` are ignored while it is focused.
 

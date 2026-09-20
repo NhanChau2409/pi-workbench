@@ -210,31 +210,6 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
 
     const interaction = new InteractionState();
 
-    ctx.ui.setWidget("nvim-tui-transcript-ruler", (tui, theme) => {
-      const unsubscribe = interaction.subscribe(() => tui.requestRender());
-      return {
-        render(width: number): string[] {
-          const active = interaction.target === "transcript";
-          const fullscreen = tui.mode === "fullscreen";
-          const label = !fullscreen
-            ? " transcript requires fullscreen TUI "
-            : active
-              ? " TRANSCRIPT • NORMAL "
-              : " transcript · Ctrl-] to focus ";
-          const side = "─".repeat(Math.max(0, Math.floor((width - label.length) / 2)));
-          const line = truncateToWidth(`${side}${label}${side}`, width, "");
-          return [theme.fg(!fullscreen ? "warning" : active ? "accent" : "dim", line)];
-        },
-        handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
-          if (event.button !== "left" || (event.type !== "press" && event.type !== "click")) return undefined;
-          interaction.set("normal", "transcript");
-          return { handled: true, render: true };
-        },
-        invalidate() {},
-        dispose: unsubscribe,
-      };
-    });
-
     ctx.ui.setEditorComponent((tui, theme, keybindings) => {
       activeEditor?.disposeNvim();
       if (tui.mode !== "fullscreen") {
@@ -248,7 +223,6 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
   pi.on("session_shutdown", (_event, ctx) => {
     activeEditor?.disposeNvim();
     activeEditor = undefined;
-    ctx.ui.setWidget("nvim-tui-transcript-ruler", undefined);
     ctx.ui.setEditorComponent(undefined);
   });
 }
