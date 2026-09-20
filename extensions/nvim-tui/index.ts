@@ -215,10 +215,15 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
       return {
         render(width: number): string[] {
           const active = interaction.target === "transcript";
-          const label = active ? " TRANSCRIPT • NORMAL " : " transcript · Ctrl-] to focus ";
+          const fullscreen = tui.mode === "fullscreen";
+          const label = !fullscreen
+            ? " transcript requires fullscreen TUI "
+            : active
+              ? " TRANSCRIPT • NORMAL "
+              : " transcript · Ctrl-] to focus ";
           const side = "─".repeat(Math.max(0, Math.floor((width - label.length) / 2)));
           const line = truncateToWidth(`${side}${label}${side}`, width, "");
-          return [theme.fg(active ? "accent" : "dim", line)];
+          return [theme.fg(!fullscreen ? "warning" : active ? "accent" : "dim", line)];
         },
         handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
           if (event.button !== "left" || (event.type !== "press" && event.type !== "click")) return undefined;
@@ -232,6 +237,9 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
 
     ctx.ui.setEditorComponent((tui, theme, keybindings) => {
       activeEditor?.disposeNvim();
+      if (tui.mode !== "fullscreen") {
+        ctx.ui.notify("nvim-tui transcript focus requires fullscreen TUI mode", "warning");
+      }
       activeEditor = new NvimTuiEditor(tui, theme, keybindings, interaction);
       return activeEditor;
     });

@@ -74,6 +74,8 @@ Only include keys that the package actually provides.
    - For package structure: `npm pkg get pi` if package.json exists.
    - For extensions: run typecheck/tests when available, or temporarily use `pi -e ./extensions/<name>/index.ts`.
    - For skills/prompts/themes: inspect paths and frontmatter; run Pi with the package only if needed.
+   - Record runtime prerequisites such as `tuiMode`, terminal protocol, environment variables, or external binaries. Inspect the effective user/project settings rather than assuming defaults satisfy them.
+   - Make unmet prerequisites visible at runtime with a clear warning instead of silently disabling the feature.
 
 4. Commit and push to GitHub.
 
@@ -180,6 +182,7 @@ When done, report:
 - commit and pushed tag
 - `pi list` selected package ref
 - installed checkout commit/version and whether it matches the tag
+- runtime prerequisites and whether the effective Pi settings satisfy them
 - runtime state: `reload pending` or `reloaded and behavior checked`
 
-Never say “installed and loaded” merely because `pi install` or `pi update` succeeded.
+Never say “installed and loaded” merely because `pi install` or `pi update` succeeded. A package can be selected at the right commit but still appear broken because its required TUI mode or other runtime configuration is inactive.
