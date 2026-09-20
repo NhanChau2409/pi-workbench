@@ -64,6 +64,14 @@ type IntegrationInput = {
   decision?: { title: string; markdown: string };
 };
 
+export type CreateBranchOptions = {
+  relatedGoal?: string;
+  relatedMilestone?: string;
+  fromBranchId?: string;
+  sourceBranchIds?: string[];
+  sourceDecisionIds?: string[];
+};
+
 const LOCK_STALE_MS = 5 * 60 * 1000;
 
 function now(): string {
@@ -115,6 +123,17 @@ export class ProjectStore {
 
   explorationPath(branchId: string): string {
     return join(this.runtimeRoot(), "explorations", branchId);
+  }
+
+  decisionPaths(projectId: string, decisionIds: string[]): string[] {
+    const directory = join(this.projectPath(projectId), "decisions");
+    if (!existsSync(directory)) return [];
+    const entries = readdirSync(directory, { withFileTypes: true });
+    return decisionIds.flatMap((decisionId) => {
+      if (!/^DEC-\d+$/.test(decisionId)) return [];
+      const entry = entries.find((candidate) => candidate.isFile() && candidate.name.startsWith(`${decisionId}-`));
+      return entry ? [join(directory, entry.name)] : [];
+    });
   }
 
   private withLock<T>(projectId: string, operation: () => T): T {
@@ -234,7 +253,7 @@ export class ProjectStore {
     return branch;
   }
 
-  createBranch(projectId: string, type: BranchType, title: string): BranchDocument {
+  createBranch(projectId: string, type: BranchType, title: string, options: CreateBranchOptions = {}): BranchDocument {
     return this.withLock(projectId, () => {
       const project = this.readProject(projectId);
       const all = this.listBranches(projectId, true);
@@ -242,6 +261,7 @@ export class ProjectStore {
       const prefix = type === "explore" ? "EXP" : "WORK";
       const id = `${prefix}-${String(next).padStart(3, "0")}`;
       const timestamp = now();
+      const markdown = branchTemplate(type, title, options);
       const metadata: BranchMetadata = {
         schemaVersion: 1,
         id,
@@ -251,12 +271,16 @@ export class ProjectStore {
         status: "active",
         baseRevision: project.metadata.revision,
         revision: 0,
-        contentHash: contentHash(normalizedMarkdown(branchTemplate(type, title))),
+        contentHash: contentHash(normalizedMarkdown(markdown)),
         createdAt: timestamp,
         updatedAt: timestamp,
+        ...(options.relatedGoal ? { relatedGoal: options.relatedGoal } : {}),
+        ...(options.relatedMilestone ? { relatedMilestone: options.relatedMilestone } : {}),
+        ...(options.fromBranchId ? { fromBranchId: options.fromBranchId } : {}),
+        ...(options.sourceBranchIds?.length ? { sourceBranchIds: options.sourceBranchIds } : {}),
+        ...(options.sourceDecisionIds?.length ? { sourceDecisionIds: options.sourceDecisionIds } : {}),
       };
       const path = join(this.projectPath(projectId), "branches", `${id}-${slugify(title)}.md`);
-      const markdown = branchTemplate(type, title);
       atomicWrite(path, serializeBranch(metadata, markdown));
       if (type === "explore") mkdirSync(this.explorationPath(id), { recursive: true });
       return { metadata, markdown, path };
@@ -346,12 +370,18 @@ export class ProjectStore {
 
       const timestamp = now();
       const finalBranchMarkdown = normalizedMarkdown(input.branchMarkdown);
+      const decisionId = decisionPath ? /^DEC-\d+/.exec(basename(decisionPath))?.[0] : undefined;
+      const sourceDecisionIds = [...new Set([
+        ...(branch.metadata.sourceDecisionIds ?? []),
+        ...(decisionId ? [decisionId] : []),
+      ])];
       const branchMetadata: BranchMetadata = {
         ...branch.metadata,
         status: input.status,
         revision: branch.metadata.revision + 1,
         contentHash: contentHash(finalBranchMarkdown),
         updatedAt: timestamp,
+        ...(sourceDecisionIds.length ? { sourceDecisionIds } : {}),
       };
       const archivePath = join(this.projectPath(projectId), "archive", basename(branch.path));
       atomicWrite(branch.path, serializeBranch(branchMetadata, finalBranchMarkdown));
@@ -381,6 +411,6 @@ export class ProjectStore {
 
   brief(projectId: string): string {
     const project = this.readProject(projectId);
-    return projectBrief(project.metadata, project.plan, this.listBranches(projectId));
+    return projectBrief(project.metadata, project.projectMarkdown, project.plan, this.listBranches(projectId));
   }
 }

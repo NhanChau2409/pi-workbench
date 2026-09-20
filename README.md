@@ -10,9 +10,14 @@ A small `/project` interface for long-running work:
 
 ```text
 /project
+/project status
+/project overview
+/project switch
+/project exit
 /project new <outcome>
 /project explore <question>
-/project work <near-term outcome>
+/project work <verified outcome>
+/project work --from EXP-NNN <verified outcome>
 /project --help
 ```
 
@@ -28,7 +33,11 @@ Projects live in the current repository:
 └── archive/
 ```
 
-`PROJECT.md` preserves the long-term vision so fast-feedback experiments do not accidentally redefine the destination. `PLAN.md` is the concise rolling execution picture. Both are readable in any Markdown editor and integrated revision-safely. Explore branches reduce uncertainty through evidence; work branches produce verified increments. Multiple Pi sessions can work on independent branches, while revision checks prevent silent overwrites during integration.
+`PROJECT.md` preserves the long-term desired state so fast-feedback experiments do not accidentally redefine the destination. `PLAN.md` tracks the current meaningful milestone, evidence, blockers, decisions, and rolling Now/Next/Later state. Both remain readable in any Markdown editor and integrate revision-safely.
+
+A compact persistent TUI display derives project, goal, milestone, active branch, operational phase, observable activity, evidence count, and blocker/next action from those files, branch metadata, and Pi lifecycle events. Idle sessions always show `WAITING`; the display reports operations such as reading or testing, never private model reasoning.
+
+Explore branches reduce uncertainty through evidence; work branches produce verified increments. `/project work --from EXP-NNN ...` records lineage from an adopted exploration and related decisions. `/project switch` continues a selected branch in a fresh Pi session so unrelated conversation does not contaminate its context. Multiple Pi sessions can work on independent project-tool branches while revision checks prevent silent overwrites.
 
 The extension gives the agent two tools:
 

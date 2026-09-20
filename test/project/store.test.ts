@@ -41,9 +41,19 @@ test("project store manages independent branches and revision-safe integration",
     assert.match(store.brief(project.metadata.id), /Outcome:/);
 
     const exploration = store.createBranch(project.metadata.id, "explore", "Test account recovery");
-    const work = store.createBranch(project.metadata.id, "work", "Implement registration");
+    const work = store.createBranch(project.metadata.id, "work", "Implement registration", {
+      relatedGoal: "Replace passwords safely",
+      relatedMilestone: "Deliver registration",
+      fromBranchId: "EXP-001",
+      sourceBranchIds: ["EXP-001"],
+      sourceDecisionIds: ["DEC-001"],
+    });
     assert.equal(exploration.metadata.id, "EXP-001");
     assert.equal(work.metadata.id, "WORK-002");
+    assert.equal(work.metadata.fromBranchId, "EXP-001");
+    assert.deepEqual(work.metadata.sourceBranchIds, ["EXP-001"]);
+    assert.deepEqual(work.metadata.sourceDecisionIds, ["DEC-001"]);
+    assert.match(work.markdown, /Related milestone: Deliver registration/);
     assert.equal(store.listBranches(project.metadata.id).length, 2);
 
     const checkpoint = store.checkpointBranch(

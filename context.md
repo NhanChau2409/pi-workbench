@@ -49,24 +49,26 @@ A project is the stable container. Its plan is a rolling view of Now, Next, and 
 
 ```text
 .pi/projects/<project-id>/
-├── PLAN.md               concise human project picture
+├── PROJECT.md            durable desired state and milestone horizon
+├── PLAN.md               current meaningful milestone and rolling execution
 ├── project.json          identity, lifecycle status, and trunk revision
-├── branches/             active EXP-* and WORK-* Markdown branches
+├── branches/             active EXP-* and WORK-* project-tool branches
 ├── decisions/            durable DEC-* records
 └── archive/              completed branch records
 ```
 
 Transient locks and disposable exploration files live under `.pi/runtime/` and should be ignored by Git. Repository files are canonical; Pi session entries only remember active project and branch pointers.
 
+`PROJECT.md` owns the long-term desired state, goals, principles, system shape, long-term success evidence, non-goals, and meaningful milestone horizon.
+
 `PLAN.md` owns:
 
-- desired outcome and success evidence;
+- the current meaningful milestone and its success evidence;
 - constraints and non-goals;
-- concise current status;
-- Now / Next / Later planning horizons;
-- open questions and important decisions.
+- concise current status, blockers, decisions, and next action;
+- Now / Next / Later planning horizons.
 
-Branch files own detailed evidence, progress, and verification. Git owns historical versions; do not turn `PLAN.md` into an unbounded activity log.
+A meaningful milestone is the bounded valuable outcome; there is no separate sub-goal layer. Branch files own detailed evidence, progress, verification, base revision, related goal/milestone, and source lineage. Git owns historical versions; do not turn `PLAN.md` into an unbounded activity log.
 
 ### Concurrency model
 
@@ -80,13 +82,20 @@ Keep the command vocabulary small:
 
 ```text
 /project
+/project status
+/project overview
+/project switch
+/project exit
 /project new <outcome>
 /project explore <question>
-/project work <near-term outcome>
+/project work <verified outcome>
+/project work --from EXP-NNN <verified outcome>
 /project --help
 ```
 
-Bare `/project` provides a concise text brief and can resume an active branch through Pi's standard selector. Markdown editors remain the detailed interface; do not build a custom graphical dashboard unless plain files demonstrably fail.
+Bare `/project` opens a compact dashboard and branch selector. A persistent widget derives project direction and execution state from PROJECT.md, PLAN.md, branch metadata, checkpoints, decisions, and Pi lifecycle events—never from another state Markdown file. The only operational phases are `SHAPING`, `EXPLORING`, `IMPLEMENTING`, `VERIFYING`, `BLOCKED`, and `WAITING`; idle sessions must show `WAITING`, and observable activity must not expose private model reasoning.
+
+`/project switch` uses Pi session replacement to continue the selected branch in a fresh session. Explore-to-work handoff uses `/project work --from EXP-NNN ...`, carrying source exploration and decision lineage into the work branch.
 
 ## TL;DR boundary
 
