@@ -95,14 +95,32 @@ git push origin v0.1.1
 pi install git:github.com/<owner>/<repo>@v0.1.1
 ```
 
-6. Update Pi from the central package.
+6. Install/update Pi from the pinned central package and verify the rollout.
 
 ```bash
+pi install git:github.com/<owner>/<repo>@<tag>
 pi update --extensions
-/reload
+pi list
 ```
 
-Use `/reload` after installing/updating when in the TUI.
+Do not report rollout complete from a successful push alone. Verify all three states:
+
+```bash
+# Source tag resolves to the intended commit
+git rev-list -n 1 <tag>
+
+# Pi settings select the new pinned ref
+pi list
+
+# Pi's installed checkout is actually at that commit
+git -C ~/.pi/agent/git/github.com/<owner>/<repo> rev-parse HEAD
+```
+
+The tag commit, selected ref shown by `pi list`, and installed checkout commit must agree. If the package version is meaningful, also inspect the installed `package.json`.
+
+7. Activate the installed code in the running TUI.
+
+Run `/reload` after install/update. A shell command cannot reload a separate already-running Pi TUI, so report the runtime as **installed, reload pending** until the user runs `/reload`. After reload, ask for one direct behavior check before calling the feature manually verified.
 
 ## Decision rules
 
@@ -158,7 +176,10 @@ export default function extension(pi: ExtensionAPI) {
 When done, report:
 
 - repository path and GitHub remote
-- files changed
-- validation run
-- install/update command to use
-- whether `/reload` is needed
+- files changed and validation run
+- commit and pushed tag
+- `pi list` selected package ref
+- installed checkout commit/version and whether it matches the tag
+- runtime state: `reload pending` or `reloaded and behavior checked`
+
+Never say “installed and loaded” merely because `pi install` or `pi update` succeeded.

@@ -5,6 +5,8 @@ import {
   matchesKey,
   truncateToWidth,
   TuiAltScreen,
+  type ScrollView,
+  type ScrollViewScrollbar,
   type TUI,
   type TuiMouseEvent,
   type TuiMouseEventResult,
@@ -57,8 +59,19 @@ class InteractionState {
   }
 }
 
+function getTranscriptScrollView(tui: TUI): ScrollView | undefined {
+  if (!(tui instanceof TuiAltScreen)) return undefined;
+  const internal = tui as unknown as { getPrimaryScrollView?: () => ScrollView };
+  return internal.getPrimaryScrollView?.call(tui);
+}
+
 class NvimTuiEditor extends CustomEditor {
   private countBuffer = "";
+  private readonly transcript: ScrollView | undefined;
+  private readonly originalTranscriptMouseHandler: NonNullable<ScrollView["handleMouse"]>;
+  private readonly originalScrollbar: ScrollViewScrollbar | undefined;
+  private readonly unsubscribeInput: () => void;
+  private readonly unsubscribeState: () => void;
 
   constructor(
     private readonly appTui: TUI,
@@ -67,14 +80,29 @@ class NvimTuiEditor extends CustomEditor {
     private readonly interaction: InteractionState,
   ) {
     super(appTui, theme, keybindings);
+    this.transcript = getTranscriptScrollView(appTui);
+    this.originalTranscriptMouseHandler = this.transcript?.handleMouse ?? (() => undefined);
+    this.originalScrollbar = this.transcript?.scrollbar;
+
+    if (this.transcript) {
+      this.transcript.setScrollbar("always");
+      this.transcript.handleMouse = (event) => {
+        if (event.button === "left" && (event.type === "press" || event.type === "click")) {
+          this.interaction.set("normal", "transcript");
+        }
+        return this.originalTranscriptMouseHandler?.call(this.transcript, event);
+      };
+    }
+
+    this.unsubscribeState = this.interaction.subscribe(() => this.syncFocus());
+    this.unsubscribeInput = this.appTui.addInputListener((data) => this.handleTranscriptFocusInput(data));
   }
 
   handleInput(data: string): void {
     const printable = decodeKittyPrintable(data) ?? data;
 
     if (matchesKey(data, "ctrl+]")) {
-      if (this.interaction.target === "editor") this.interaction.set("normal", "transcript");
-      else this.interaction.setTarget("editor");
+      if (this.transcript) this.interaction.set("normal", "transcript");
       return;
     }
 
@@ -86,16 +114,6 @@ class NvimTuiEditor extends CustomEditor {
     if (this.interaction.mode === "insert") {
       this.interaction.setTarget("editor");
       super.handleInput(data);
-      return;
-    }
-
-    if (this.interaction.target === "transcript") {
-      if (printable === "i" || printable === "a") {
-        this.interaction.set("insert", "editor");
-        if (printable === "a") super.handleInput("\x1b[C");
-        return;
-      }
-      this.handleTranscriptInput(printable === data ? data : printable);
       return;
     }
 
@@ -134,12 +152,38 @@ class NvimTuiEditor extends CustomEditor {
     super.handleInput(rawData);
   }
 
-  private handleTranscriptInput(data: string): void {
+  disposeNvim(): void {
+    this.unsubscribeInput();
+    this.unsubscribeState();
+    if (this.transcript) {
+      this.transcript.handleMouse = this.originalTranscriptMouseHandler;
+      if (this.originalScrollbar) this.transcript.setScrollbar(this.originalScrollbar);
+    }
+  }
+
+  private handleTranscriptFocusInput(data: string): { consume?: boolean } | undefined {
+    if (this.interaction.target !== "transcript") return undefined;
+
+    if (matchesKey(data, "ctrl+]") || matchesKey(data, "escape")) {
+      this.interaction.set("normal", "editor");
+      return { consume: true };
+    }
+
+    const printable = decodeKittyPrintable(data) ?? data;
+    if (printable === "i" || printable === "a") return { consume: true };
+
+    return this.handleTranscriptInput(printable === data ? data : printable)
+      ? { consume: true }
+      : undefined;
+  }
+
+  private handleTranscriptInput(data: string): boolean {
     const parsed = parseTranscriptMotion(data, this.countBuffer);
     this.countBuffer = parsed.countBuffer;
-    if (parsed.action !== "motion") return;
+    if (parsed.action === "pending") return true;
+    if (parsed.action !== "motion") return false;
 
-    if (!(this.appTui instanceof TuiAltScreen) && !isViewportTUI(this.appTui)) return;
+    if (!(this.appTui instanceof TuiAltScreen) && !isViewportTUI(this.appTui)) return false;
 
     const halfPageLines = Math.max(1, Math.floor(this.appTui.terminal.rows / 2));
     applyTranscriptMotion(this.appTui as TuiAltScreen, parsed.motion, {
@@ -148,10 +192,19 @@ class NvimTuiEditor extends CustomEditor {
       blockLines: Math.max(3, Math.floor(halfPageLines / 2)),
     });
     this.appTui.requestRender();
+    return true;
+  }
+
+  private syncFocus(): void {
+    if (this.interaction.target === "transcript" && this.transcript) this.appTui.setFocus(this.transcript);
+    else this.appTui.setFocus(this);
+    this.appTui.requestRender();
   }
 }
 
 export default function nvimTuiExtension(pi: ExtensionAPI): void {
+  let activeEditor: NvimTuiEditor | undefined;
+
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
 
@@ -177,12 +230,16 @@ export default function nvimTuiExtension(pi: ExtensionAPI): void {
       };
     });
 
-    ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new NvimTuiEditor(tui, theme, keybindings, interaction),
-    );
+    ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+      activeEditor?.disposeNvim();
+      activeEditor = new NvimTuiEditor(tui, theme, keybindings, interaction);
+      return activeEditor;
+    });
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
+    activeEditor?.disposeNvim();
+    activeEditor = undefined;
     ctx.ui.setWidget("nvim-tui-transcript-ruler", undefined);
     ctx.ui.setEditorComponent(undefined);
   });
