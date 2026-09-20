@@ -40,7 +40,7 @@
     "extensions": [
       "./extensions/project/index.ts",
       "./extensions/web-tools/index.ts",
-      "./extensions/nvim-tui/index.ts"
+      "./extensions/minimal-tui/index.ts"
     ],
     "skills": [
       "./skills"
