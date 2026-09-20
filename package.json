@@ -1,6 +1,6 @@
 {
   "name": "pi-workbench",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "A personal Pi workbench for project workflows, web tools, skills, and prompt templates.",
   "keywords": [
     "pi-package",
@@ -39,7 +39,8 @@
   "pi": {
     "extensions": [
       "./extensions/project/index.ts",
-      "./extensions/web-tools/index.ts"
+      "./extensions/web-tools/index.ts",
+      "./extensions/minimal-tui/index.ts"
     ],
     "skills": [
       "./skills"
