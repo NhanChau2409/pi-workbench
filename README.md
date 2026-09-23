@@ -9,42 +9,24 @@ A personal workbench of reusable [Pi](https://pi.dev) extensions, skills, and pr
 A small `/project` interface for long-running work:
 
 ```text
-/project
+/project new <title>
+/project open [project-id]
 /project status
-/project overview
-/project switch
+/project explore <topic>
+/project work <outcome>
 /project exit
-/project new <outcome>
-/project explore <question>
-/project work <verified outcome>
-/project work --from EXP-NNN <verified outcome>
-/project --help
 ```
 
 Projects live in the current repository:
 
 ```text
 .pi/projects/<project>/
-├── PROJECT.md       # durable vision, principles, and milestone horizon
-├── PLAN.md          # concise rolling Now/Next/Later execution plan
-├── project.json
-├── branches/
-├── decisions/
-└── archive/
+├── PROJECT.md       # vision, direction, and one-sentence current status
+├── explore/         # one Markdown note per investigation
+└── work/            # one Markdown plan/results record per implementation effort
 ```
 
-`PROJECT.md` preserves the long-term desired state so fast-feedback experiments do not accidentally redefine the destination. `PLAN.md` tracks the current meaningful milestone, evidence, blockers, decisions, and rolling Now/Next/Later state. Both remain readable in any Markdown editor and integrate revision-safely.
-
-A compact persistent TUI display derives project, goal, milestone, active branch, operational phase, observable activity, evidence count, and blocker/next action from those files, branch metadata, and Pi lifecycle events. Idle sessions always show `WAITING`; the display reports operations such as reading or testing, never private model reasoning.
-
-Explore branches reduce uncertainty through evidence; work branches produce verified increments. `/project work --from EXP-NNN ...` records lineage from an adopted exploration and related decisions. `/project switch` continues a selected branch in a fresh Pi session so unrelated conversation does not contaminate its context. Multiple Pi sessions can work on independent project-tool branches while revision checks prevent silent overwrites.
-
-The extension gives the agent two tools:
-
-- `project_checkpoint` records material branch progress or evidence.
-- `project_integrate` completes a branch and safely updates the latest project plan.
-
-Version 0.3 replaces the former `/plan` living-plan extension with `/project`.
+The extension is deliberately file-only: no branch metadata, archive, decisions, revisions, checkpoints, or integration tools. `PROJECT.md` stays brief; detailed research belongs in `explore/`, while implementation plans, results, and verification belong in `work/`. The persistent status is one muted sentence read from `PROJECT.md`.
 
 ### Neovim-like TUI
 
@@ -61,7 +43,7 @@ Version 0.3 replaces the former `/plan` living-plan extension with `/project`.
 /tldr README.md
 /tldr src/auth
 /tldr https://example.com/article
-/tldr .pi/projects/passkeys/PLAN.md
+/tldr .pi/projects/passkeys/PROJECT.md
 /tldr this error log, focus on the likely cause
 ```
 
@@ -84,7 +66,7 @@ See [`context.md`](context.md) for architecture and maintenance conventions.
 ## Install
 
 ```bash
-pi install git:github.com/NhanChau2409/pi-workbench@v0.4.8
+pi install git:github.com/NhanChau2409/pi-workbench@v0.4.12
 ```
 
 Use `/reload` in an existing Pi session after updating.

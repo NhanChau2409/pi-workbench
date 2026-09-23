@@ -1,146 +1,28 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { projectPlanTemplate, projectVisionTemplate } from "../../extensions/project/domain.ts";
-import {
-  BranchRevisionConflict,
-  ProjectRevisionConflict,
-  ProjectStore,
-} from "../../extensions/project/store.ts";
+import { ProjectStore } from "../../extensions/project/store.ts";
 
-test("project store migrates legacy projects to durable PROJECT.md vision", () => {
-  const cwd = mkdtempSync(join(tmpdir(), "pi-workbench-project-migration-"));
-  try {
-    const store = new ProjectStore(cwd);
-    const created = store.createProject("Build a personal agent platform");
-    const metadataPath = join(created.path, "project.json");
-    const legacyMetadata = JSON.parse(readFileSync(metadataPath, "utf8"));
-    delete legacyMetadata.projectHash;
-    writeFileSync(metadataPath, `${JSON.stringify(legacyMetadata, null, 2)}\n`, "utf8");
-    rmSync(store.visionPath(created.metadata.id));
-
-    const migrated = store.readProject(created.metadata.id);
-    assert.match(migrated.projectMarkdown, /## Vision/);
-    assert.equal(existsSync(store.visionPath(created.metadata.id)), true);
-    assert.equal(typeof migrated.metadata.projectHash, "string");
-  } finally {
-    rmSync(cwd, { recursive: true, force: true });
-  }
-});
-
-test("project store manages independent branches and revision-safe integration", () => {
+test("project store creates one project document with exploration and work folders", () => {
   const cwd = mkdtempSync(join(tmpdir(), "pi-workbench-project-"));
   try {
     const store = new ProjectStore(cwd);
-    const project = store.createProject("Replace passwords with passkeys");
-    assert.equal(project.metadata.revision, 0);
-    assert.equal(readFileSync(join(cwd, ".pi", ".gitignore"), "utf8"), "runtime/\n");
-    assert.match(readFileSync(store.visionPath(project.metadata.id), "utf8"), /## Vision/);
-    assert.match(store.brief(project.metadata.id), /Outcome:/);
+    const project = store.createProject("Build a personal agent");
 
-    const exploration = store.createBranch(project.metadata.id, "explore", "Test account recovery");
-    const work = store.createBranch(project.metadata.id, "work", "Implement registration", {
-      relatedGoal: "Replace passwords safely",
-      relatedMilestone: "Deliver registration",
-      fromBranchId: "EXP-001",
-      sourceBranchIds: ["EXP-001"],
-      sourceDecisionIds: ["DEC-001"],
-    });
-    assert.equal(exploration.metadata.id, "EXP-001");
-    assert.equal(work.metadata.id, "WORK-002");
-    assert.equal(work.metadata.fromBranchId, "EXP-001");
-    assert.deepEqual(work.metadata.sourceBranchIds, ["EXP-001"]);
-    assert.deepEqual(work.metadata.sourceDecisionIds, ["DEC-001"]);
-    assert.match(work.markdown, /Related milestone: Deliver registration/);
-    assert.equal(store.listBranches(project.metadata.id).length, 2);
+    assert.equal(existsSync(project.path), true);
+    assert.equal(existsSync(store.areaPath(project.id, "explore")), true);
+    assert.equal(existsSync(store.areaPath(project.id, "work")), true);
+    assert.match(readFileSync(project.path, "utf8"), /## Current status\n\nNot started\./);
+    assert.equal(store.status(project.id), "Not started.");
 
-    const checkpoint = store.checkpointBranch(
-      project.metadata.id,
-      exploration.metadata.id,
-      0,
-      exploration.markdown.replace("_Pending: adopt, reject, or continue exploring._", "Adopt recovery codes."),
-    );
-    assert.equal(checkpoint.metadata.revision, 1);
-    assert.throws(
-      () => store.checkpointBranch(project.metadata.id, exploration.metadata.id, 0, checkpoint.markdown),
-      BranchRevisionConflict,
-    );
-
-    const manuallyEditedBranch = readFileSync(exploration.path, "utf8")
-      .replace("Adopt recovery codes.", "Adopt recovery codes after manual review.");
-    writeFileSync(exploration.path, manuallyEditedBranch, "utf8");
-    assert.throws(
-      () => store.checkpointBranch(project.metadata.id, exploration.metadata.id, 1, checkpoint.markdown),
-      BranchRevisionConflict,
-    );
-    const reconciledBranch = store.readBranch(project.metadata.id, exploration.metadata.id);
-    assert.equal(reconciledBranch.metadata.revision, 2);
-
-    const firstProjectMarkdown = projectVisionTemplate(project.metadata.title)
-      .replace("_What future are we trying to create, beyond the first milestone?_", "Passwords are replaced with recoverable passkeys.");
-    const firstPlan = projectPlanTemplate(project.metadata.title)
-      .replace("Establish the project direction", "Adopt recovery codes")
-      .replace("Project created  ", "Use recovery codes  ");
-    const integrated = store.integrateBranch(project.metadata.id, exploration.metadata.id, {
-      expectedProjectRevision: 0,
-      expectedBranchRevision: 2,
-      branchMarkdown: reconciledBranch.markdown,
-      projectMarkdown: firstProjectMarkdown,
-      planMarkdown: firstPlan,
-      status: "adopted",
-      decision: {
-        title: "Use recovery codes",
-        markdown: "## Context\nRecovery must survive device loss.\n\n## Decision\nUse one-time recovery codes.\n\n## Consequences\nCodes require secure storage.",
-      },
-    });
-    assert.equal(integrated.project.metadata.revision, 1);
-    assert.equal(integrated.branch.metadata.status, "adopted");
-    assert.ok(integrated.decisionPath && existsSync(integrated.decisionPath));
-    assert.equal(store.listBranches(project.metadata.id).length, 1);
-    assert.equal(store.listBranches(project.metadata.id, true).length, 2);
-
-    assert.throws(
-      () => store.integrateBranch(project.metadata.id, work.metadata.id, {
-        expectedProjectRevision: 0,
-        expectedBranchRevision: 0,
-        branchMarkdown: work.markdown,
-        projectMarkdown: firstProjectMarkdown,
-        planMarkdown: firstPlan,
-        status: "completed",
-      }),
-      ProjectRevisionConflict,
-    );
-
-    const latest = store.readProject(project.metadata.id);
-    const manuallyEditedPlan = latest.plan.replace("## Open questions", "## Editor note\n\nClarified directly in LazyVim.\n\n## Open questions");
-    writeFileSync(store.planPath(project.metadata.id), manuallyEditedPlan, "utf8");
-    assert.throws(
-      () => store.integrateBranch(project.metadata.id, work.metadata.id, {
-        expectedProjectRevision: 1,
-        expectedBranchRevision: 0,
-        branchMarkdown: work.markdown,
-        projectMarkdown: firstProjectMarkdown,
-        planMarkdown: manuallyEditedPlan,
-        status: "completed",
-      }),
-      ProjectRevisionConflict,
-    );
-
-    const reconciled = store.readProject(project.metadata.id);
-    assert.equal(reconciled.metadata.revision, 2);
-    const secondPlan = reconciled.plan.replace("## Now\n\n", "## Now\n\nRegistration implemented and verified.\n\n");
-    const second = store.integrateBranch(project.metadata.id, work.metadata.id, {
-      expectedProjectRevision: 2,
-      expectedBranchRevision: 0,
-      branchMarkdown: work.markdown.replace("_Pending._", "Registration verified."),
-      projectMarkdown: firstProjectMarkdown,
-      planMarkdown: secondPlan,
-      status: "completed",
-    });
-    assert.equal(second.project.metadata.revision, 3);
-    assert.match(readFileSync(store.planPath(project.metadata.id), "utf8"), /Registration implemented/);
+    const exploration = store.createRecord(project.id, "explore", "Compare chat channels");
+    const work = store.createRecord(project.id, "work", "Build Telegram integration");
+    assert.match(exploration, /explore\/.*compare-chat-channels\.md$/);
+    assert.match(work, /work\/.*build-telegram-integration\.md$/);
+    assert.match(readFileSync(exploration, "utf8"), /## Findings/);
+    assert.match(readFileSync(work, "utf8"), /## Verification/);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

@@ -1,198 +1,37 @@
-export type ProjectStatus = "active" | "completed" | "archived";
-export type BranchType = "explore" | "work";
-export type BranchStatus = "active" | "adopted" | "rejected" | "inconclusive" | "completed";
-export type OperationalPhase = "SHAPING" | "EXPLORING" | "IMPLEMENTING" | "VERIFYING" | "BLOCKED" | "WAITING";
+import { basename } from "node:path";
 
-export type ProjectMetadata = {
-  schemaVersion: 1;
+export type ProjectArea = "explore" | "work";
+
+export type ProjectDocument = {
   id: string;
   title: string;
-  status: ProjectStatus;
-  revision: number;
-  projectHash: string;
-  planHash: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type BranchMetadata = {
-  schemaVersion: 1;
-  id: string;
-  projectId: string;
-  type: BranchType;
-  title: string;
-  status: BranchStatus;
-  baseRevision: number;
-  revision: number;
-  contentHash: string;
-  createdAt: string;
-  updatedAt: string;
-  relatedGoal?: string;
-  relatedMilestone?: string;
-  fromBranchId?: string;
-  sourceBranchIds?: string[];
-  sourceDecisionIds?: string[];
-};
-
-export type BranchDocument = {
-  metadata: BranchMetadata;
   markdown: string;
   path: string;
 };
 
-export type EvidenceCount = {
-  done: number;
-  total: number;
-};
-
-export type ProjectDashboard = {
-  projectName: string;
-  desiredStateGoal: string;
-  currentMilestone: string;
-  activeBranch?: string;
-  activeBranchType?: BranchType;
-  phase: OperationalPhase;
-  observableAction: string;
-  evidence?: EvidenceCount;
-  blockerOrNextAction: string;
-};
-
-const BRANCH_MARKER = "pi-project-branch";
-
-export function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 56) || "project";
+function cleanSentence(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "No current status recorded.";
+  return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
 }
 
-export function projectVisionTemplate(title: string): string {
-  return `# ${title}\n\n## Vision\n\n_What future are we trying to create, beyond the first milestone?_\n\n## Intended experience\n\n_What should using the completed system feel like?_\n\n## System shape\n\n_What enduring capabilities and boundaries define the envisioned system?_\n\n## Principles\n\n- _Record durable principles that should guide milestone decisions._\n\n## Long-term success\n\n- [ ] Define evidence that the vision has materially become real\n\n## Non-goals\n\n- _What should this project deliberately never become?_\n\n## Milestone horizon\n\n1. _First meaningful end-to-end capability._\n2. _Next platform or product capability._\n3. _Later expansion._\n`;
+export function projectTemplate(title: string): string {
+  return `# ${title}\n\n## Vision\n\n_What lasting outcome are we creating?_\n\n## Direction\n\n_What are we doing next, and why?_\n\n## Current status\n\nNot started.\n`;
 }
 
-export function projectPlanTemplate(title: string): string {
-  return `# ${title}\n\n> **Status:** Active  \n> **Vision:** See PROJECT.md  \n> **Now:** Establish the project direction  \n> **Next:** Resolve the most important uncertainty  \n> **Blockers:** None recorded  \n> **Last decision:** Project created  \n> **Next action:** Clarify the vision, outcome, and success evidence\n\n## Outcome\n\n_What meaningful change should the current project horizon create?_\n\n## Success evidence\n\n- [ ] Define observable evidence that the current outcome has been achieved\n\n## Constraints and non-goals\n\n- _Record current boundaries without shrinking the PROJECT.md vision._\n\n## Now\n\nClarify the vision, outcome, evidence, and highest-risk uncertainty.\n\n## Next\n\n- Explore the highest-risk uncertainty or commit one bounded work outcome.\n\n## Later\n\n- _Keep distant milestones aligned with PROJECT.md and coarse until needed._\n\n## Open questions\n\n- What must we learn before making the next commitment?\n\n## Decisions\n\n- Project created.\n`;
+export function exploreTemplate(title: string): string {
+  return `# ${title}\n\n## Question\n\n_What uncertainty are we reducing?_\n\n## Approach\n\n_Research, prototype, or experiment._\n\n## Findings\n\n_Record evidence and observations._\n\n## Conclusion\n\n_What should the project do as a result?_\n`;
 }
 
-export function branchTemplate(type: BranchType, title: string, options: { relatedGoal?: string; relatedMilestone?: string; fromBranchId?: string } = {}): string {
-  const context = [
-    options.relatedGoal ? `Related goal: ${options.relatedGoal}` : undefined,
-    options.relatedMilestone ? `Related milestone: ${options.relatedMilestone}` : undefined,
-    options.fromBranchId ? `Source branch: ${options.fromBranchId}` : undefined,
-  ].filter(Boolean).join("\n");
-  const contextBlock = context ? `\n## Context\n\n${context}\n` : "";
-
-  if (type === "explore") {
-    return `# ${title}\n${contextBlock}\n## Question\n\n_What specific uncertainty are we reducing?_\n\n## Decision this unlocks\n\n_What can we decide after learning this?_\n\n## Appetite and safety boundary\n\n_Time, cost, and what must remain disposable or untouched._\n\n## Hypotheses or options\n\n- _A coherent possibility to investigate._\n\n## Method\n\n_Research, benchmark, interview, prototype, or disposable POC._\n\n## Evidence\n\n_Record observations, including surprising or negative results._\n\n## Conclusion\n\n_Pending: adopt, reject, or continue exploring._\n\n## Impact on project\n\n_How should the project plan change?_\n`;
-  }
-
-  return `# ${title}\n${contextBlock}\n## Outcome\n\n_What verified project increment will this branch produce?_\n\n## Why now\n\n_Why is this the best next commitment?_\n\n## Scope\n\n- _The smallest meaningful slice._\n\n## Non-goals\n\n- _Explicitly excluded work._\n\n## Done when\n\n- [ ] Define observable completion evidence\n\n## Progress\n\n_Record material checkpoints, not a transcript._\n\n## Verification\n\n_Commands, tests, review, or other evidence._\n\n## Result\n\n_Pending._\n`;
+export function workTemplate(title: string): string {
+  return `# ${title}\n\n## Plan\n\n_The smallest useful implementation plan._\n\n## Implementation\n\n_What changed?_\n\n## Results\n\n_What happened?_\n\n## Verification\n\n_Commands, tests, or review evidence._\n`;
 }
 
-export function serializeBranch(metadata: BranchMetadata, markdown: string): string {
-  const marker = `<!-- ${BRANCH_MARKER} ${JSON.stringify(metadata)} -->`;
-  return `${marker}\n\n${markdown.trim()}\n`;
+export function projectTitle(markdown: string, path: string): string {
+  return /^#\s+(.+)$/m.exec(markdown)?.[1]?.trim() || basename(path, ".md");
 }
 
-export function parseBranch(content: string, path: string): BranchDocument {
-  const firstLine = content.split("\n", 1)[0] ?? "";
-  const match = /^<!-- pi-project-branch (\{.*\}) -->$/.exec(firstLine);
-  if (!match?.[1]) throw new Error(`Invalid project branch metadata: ${path}`);
-  const metadata = JSON.parse(match[1]) as BranchMetadata;
-  if (metadata.schemaVersion !== 1 || !metadata.id || !metadata.projectId || !metadata.type || !metadata.contentHash) {
-    throw new Error(`Unsupported project branch metadata: ${path}`);
-  }
-  const markdown = content.slice(firstLine.length).trimStart();
-  return { metadata, markdown, path };
-}
-
-export function validateProject(markdown: string): void {
-  const required = ["# ", "## Vision", "## Principles", "## Long-term success", "## Milestone horizon"];
-  const missing = required.filter((heading) => !markdown.includes(heading));
-  if (missing.length) throw new Error(`PROJECT.md is missing required sections: ${missing.join(", ")}`);
-}
-
-export function validatePlan(markdown: string): void {
-  const required = ["# ", "## Outcome", "## Success evidence", "## Now", "## Next", "## Later"];
-  const missing = required.filter((heading) => !markdown.includes(heading));
-  if (missing.length) throw new Error(`PLAN.md is missing required sections: ${missing.join(", ")}`);
-}
-
-export function section(markdown: string, heading: string): string {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(`^## ${escaped}\\s*$\\n+([\\s\\S]*?)(?=^## |\\s*$)`, "m").exec(markdown);
-  if (!match?.[1]) return "Not defined";
-  const lines = match[1].split("\n")
-    .map((line) => line.replace(/^[-*]\s+(?:\[[ xX]\]\s+)?/, "").replace(/^\d+\.\s+/, "").trim())
-    .filter((line) => line && !line.startsWith("_"));
-  return lines[0] ?? "Not defined";
-}
-
-export function snapshotField(markdown: string, field: string): string | undefined {
-  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^> \\*\\*${escaped}:\\*\\*\\s*(.+?)(?:\\s{2})?$`, "m").exec(markdown)?.[1]?.trim();
-}
-
-export function taskCount(markdown: string): EvidenceCount | undefined {
-  const matches = [...markdown.matchAll(/^\s*[-*]\s+\[([ xX])]\s+/gm)];
-  if (!matches.length) return undefined;
-  return {
-    done: matches.filter((match) => (match[1] ?? "").toLowerCase() === "x").length,
-    total: matches.length,
-  };
-}
-
-export function projectDashboard(
-  metadata: ProjectMetadata,
-  projectMarkdown: string,
-  plan: string,
-  branch: BranchDocument | undefined,
-  phase: OperationalPhase = "WAITING",
-  observableAction = "Idle",
-): ProjectDashboard {
-  const blocker = snapshotField(plan, "Blockers");
-  const nextAction = snapshotField(plan, "Next action") ?? section(plan, "Next");
-  return {
-    projectName: metadata.title,
-    desiredStateGoal: section(projectMarkdown, "Vision"),
-    currentMilestone: snapshotField(plan, "Now") ?? section(plan, "Outcome"),
-    activeBranch: branch?.metadata.id,
-    activeBranchType: branch?.metadata.type,
-    phase,
-    observableAction,
-    evidence: taskCount(branch?.markdown ?? plan),
-    blockerOrNextAction: blocker && !/^none\b/i.test(blocker) ? `Blocked: ${blocker}` : `Next: ${nextAction}`,
-  };
-}
-
-export function dashboardLines(dashboard: ProjectDashboard): string[] {
-  const branch = dashboard.activeBranch
-    ? `${dashboard.activeBranch} (${dashboard.activeBranchType})`
-    : "overview";
-  const evidence = dashboard.evidence ? ` · evidence ${dashboard.evidence.done}/${dashboard.evidence.total}` : "";
-  return [
-    `Project: ${dashboard.projectName}`,
-    `Goal: ${dashboard.desiredStateGoal}`,
-    `Milestone: ${dashboard.currentMilestone}`,
-    `Branch: ${branch} · ${dashboard.phase} · ${dashboard.observableAction}${evidence}`,
-    dashboard.blockerOrNextAction,
-  ];
-}
-
-export function projectBrief(metadata: ProjectMetadata, projectMarkdown: string, plan: string, branches: BranchDocument[]): string {
-  const active = branches.filter((branch) => branch.metadata.status === "active");
-  const exploring = active.filter((branch) => branch.metadata.type === "explore");
-  const working = active.filter((branch) => branch.metadata.type === "work");
-  const branchLine = [
-    working.length ? `${working.length} work` : undefined,
-    exploring.length ? `${exploring.length} explore` : undefined,
-  ].filter(Boolean).join(" · ") || "none";
-
-  return [
-    `${metadata.title} [${metadata.status.toUpperCase()}] · revision ${metadata.revision}`,
-    `Goal: ${section(projectMarkdown, "Vision")}`,
-    `Outcome: ${section(plan, "Outcome")}`,
-    `Milestone: ${snapshotField(plan, "Now") ?? section(plan, "Outcome")}`,
-    `Now: ${snapshotField(plan, "Now") ?? section(plan, "Now")}`,
-    `Branches: ${branchLine}`,
-    `Blockers: ${snapshotField(plan, "Blockers") ?? "None recorded"}`,
-    `Next action: ${snapshotField(plan, "Next action") ?? "Review the plan"}`,
-  ].join("\n");
+export function currentStatus(markdown: string): string {
+  const match = /##\s+Current status\s*\n+([\s\S]*?)(?=\n##\s|$)/i.exec(markdown);
+  return cleanSentence(match?.[1] ?? "");
 }
