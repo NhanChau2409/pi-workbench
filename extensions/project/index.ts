@@ -45,7 +45,9 @@ export default function projectExtension(pi: ExtensionAPI): void {
     if (!state.projectId) return clearDisplay(ctx);
     try {
       const project = store.readProject(state.projectId);
-      const status = `Project ${project.title}: ${store.status(project.id)}`;
+      const status = state.activeFile && state.activeArea
+        ? `${project.title} · ${state.activeArea === "explore" ? "Explore" : "Work"} · ${store.recordTitle(state.activeFile)}`
+        : `Project ${project.title}: ${store.status(project.id)}`;
       ctx.ui.setStatus(STATUS_ID, ctx.ui.theme?.fg("muted", status) ?? status);
     } catch {
       state = emptyState();

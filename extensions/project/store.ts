@@ -68,6 +68,10 @@ export class ProjectStore {
     return this.readProject(id);
   }
 
+  recordTitle(path: string): string {
+    return projectTitle(readFileSync(path, "utf8"), path);
+  }
+
   createRecord(id: string, area: ProjectArea, title: string): string {
     const directory = this.areaPath(id, area);
     if (!existsSync(this.projectFile(id))) throw new Error(`Project not found: ${id}`);

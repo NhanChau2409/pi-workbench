@@ -60,10 +60,12 @@ test("project command manages a simple document and record folders", async () =>
     await command.handler("explore Compare chat channels", ctx);
     assert.match(notifications.at(-1) ?? "", /explore\/.*compare-chat-channels\.md$/);
     assert.match(messages.at(-1) ?? "", /exploration record/);
+    assert.equal(statuses.at(-1), "grey:Build a personal agent · Explore · Compare chat channels");
 
     await command.handler("work Build Telegram integration", ctx);
     assert.match(notifications.at(-1) ?? "", /work\/.*build-telegram-integration\.md$/);
     assert.match(messages.at(-1) ?? "", /implementation record/);
+    assert.equal(statuses.at(-1), "grey:Build a personal agent · Work · Build Telegram integration");
 
     await command.handler("status", ctx);
     assert.match(notifications.at(-1) ?? "", /Project document: .*PROJECT\.md/);
