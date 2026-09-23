@@ -42,7 +42,6 @@ test("project command creates visible project context and lineage-aware work", a
 
     const notifications: string[] = [];
     const statuses: Array<string | undefined> = [];
-    const widgets: Array<string[] | undefined> = [];
     const replacementEntries: unknown[] = [];
     let replacementMessage = "";
     const ctx = {
@@ -60,7 +59,6 @@ test("project command creates visible project context and lineage-aware work", a
         select: async (_title: string, options: string[]) => options[0],
         notify: (message: string) => notifications.push(message),
         setStatus: (_id: string, value: string | undefined) => statuses.push(value),
-        setWidget: (_id: string, value: string[] | undefined) => widgets.push(value),
       },
     };
     await handlers.get("session_start")?.({}, ctx);
@@ -79,12 +77,12 @@ test("project command creates visible project context and lineage-aware work", a
     assert.equal(existsSync(join(root, "branches", "EXP-001-shape-project-direction.md")), true);
     assert.equal(entries.length > 0, true);
     assert.match(messages.at(-1) ?? "", /long-running project/);
-    assert.ok(widgets.at(-1)?.some((line) => /EXP-001.*WAITING/.test(line)));
+    assert.match(statuses.at(-1) ?? "", /^Project Replace passwords with passkeys is on EXP-001 explore and is Waiting: Idle\.$/);
 
     await handlers.get("tool_execution_start")?.({ toolName: "bash", args: { command: "npm test" } }, ctx);
-    assert.ok(widgets.at(-1)?.some((line) => /VERIFYING.*Running verification/.test(line)));
+    assert.match(statuses.at(-1) ?? "", /is Verifying: Running verification\.$/);
     await handlers.get("agent_settled")?.({}, ctx);
-    assert.ok(widgets.at(-1)?.some((line) => /WAITING.*Idle/.test(line)));
+    assert.match(statuses.at(-1) ?? "", /is Waiting: Idle\.$/);
 
     const store = new ProjectStore(cwd);
     const source = store.readBranch("replace-passwords-with-passkeys", "EXP-001");
@@ -128,7 +126,6 @@ test("project command creates visible project context and lineage-aware work", a
 
     await command.handler("exit", ctx);
     assert.equal(statuses.at(-1), undefined);
-    assert.equal(widgets.at(-1), undefined);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

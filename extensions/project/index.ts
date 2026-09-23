@@ -28,7 +28,6 @@ type ActivityState = {
 
 const STATE_ENTRY = "project-os-state";
 const STATUS_ID = "project-harness-status";
-const WIDGET_ID = "project-harness-widget";
 const HELP = `Usage: /project [subcommand] [description]
 
 /project                              Open the dashboard and branch selector
@@ -58,6 +57,17 @@ function emptyState(): RuntimeState {
 
 function waiting(): ActivityState {
   return { phase: "WAITING", action: "Idle" };
+}
+
+function sentenceCase(value: string): string {
+  return value.slice(0, 1).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function formatProjectStatus(dashboard: ReturnType<typeof projectDashboard>): string {
+  const branch = dashboard.activeBranch
+    ? `${dashboard.activeBranch} ${dashboard.activeBranchType}`
+    : "overview";
+  return `Project ${dashboard.projectName} is on ${branch} and is ${sentenceCase(dashboard.phase)}: ${dashboard.observableAction}.`;
 }
 
 function isInside(path: string, directory: string): boolean {
@@ -117,7 +127,6 @@ export default function projectExtension(pi: ExtensionAPI): void {
 
   function clearDisplay(ctx: ExtensionContext): void {
     ctx.ui.setStatus(STATUS_ID, undefined);
-    ctx.ui.setWidget(WIDGET_ID, undefined);
   }
 
   function activeBranch(): BranchDocument | undefined {
@@ -144,9 +153,11 @@ export default function projectExtension(pi: ExtensionAPI): void {
         activity.phase,
         activity.action,
       );
-      const branch = dashboard.activeBranch ? ` · ${dashboard.activeBranch}` : "";
-      ctx.ui.setStatus(STATUS_ID, `${dashboard.phase}${branch} · ${dashboard.observableAction}`);
-      ctx.ui.setWidget(WIDGET_ID, dashboardLines(dashboard));
+      const status = formatProjectStatus(dashboard);
+      ctx.ui.setStatus(
+        STATUS_ID,
+        ctx.ui.theme?.fg("muted", status) ?? status,
+      );
     } catch {
       state = emptyState();
       clearDisplay(ctx);
